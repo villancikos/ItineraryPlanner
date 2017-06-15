@@ -6,13 +6,7 @@
     background-color:#bb90f3;
     border: 1px solid blue;
 }
-/* Optional: Makes the sample page fill the window. */
-html, body {
-}
-
-body {
-}
-
+/* Fix to make map full page and 3/4 */
 .wrapper .row {
     height: 100vh;
 }
