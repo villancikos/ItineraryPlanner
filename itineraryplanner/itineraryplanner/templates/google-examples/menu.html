@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Direct Links to Google Maps examples</h2>
+<ul>
+    <li><a href="{% url 'google-examples:autocomplete' %}">Autocomplete</a></li>
+    <li><a href="{% url 'google-examples:distances' %}">Distances</a></li>
+    <li><a href="{% url 'google-examples:searchbox' %}">SearchBox</a></li>
+</ul>
+
+{% endblock %}

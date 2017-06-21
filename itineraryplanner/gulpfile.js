@@ -92,7 +92,7 @@ gulp.task('browserSync', function() {
 // Watch
 gulp.task('watch', function() {
 
-  gulp.watch(paths.sass + '/*.scss', ['styles'].on("change", reload));
+  gulp.watch(paths.sass + '/*.scss', ['styles']);
   gulp.watch(paths.js + '/*.js', ['scripts']).on("change", reload);
   gulp.watch(paths.images + '/*', ['imgCompression']);
   gulp.watch(paths.templates + '/**/*.html').on("change", reload);
@@ -101,5 +101,5 @@ gulp.task('watch', function() {
 
 // Default task
 gulp.task('default', function() {
-    runSequence(['styles', 'scripts', 'imgCompression'], 'runServer', 'browserSync', 'watch');
+    runSequence(['styles', 'scripts', 'imgCompression'], 'browserSync', 'watch', 'runServer');
 });

@@ -2,13 +2,33 @@ var bigBen = { lat: 51.510357, lng: -0.116773 };
 window.onload = function() {
   initAutocomplete();
 };
+
+var map, placesService, infoWindow;
 var placesSelected = {};
 function addPlaceToList(googlePlace) {
-    placesSelected[googlePlace.title] = googlePlace;
+    console.log(googlePlace);
+    placesSelected[googlePlace.name] = googlePlace;
     addSelectedPlaceToSidebar(googlePlace);
     console.log(placesSelected);
 }
 
+/* 
+//Function to create a Mark on the map and assign it
+function initMap() {
+  var myLatLng = {lat: -25.363, lng: 131.044};
+
+  var map = new google.maps.Map(document.getElementById('map'), {
+    zoom: 4,
+    center: myLatLng
+  });
+
+  var marker = new google.maps.Marker({
+    position: myLatLng,
+    map: map,
+    title: 'Hello World!'
+  });
+}
+*/
 function addSelectedPlaceToSidebar(googlePlace){
     // properties I want:
     // title, position.lat, position.lng.
@@ -20,21 +40,107 @@ function addSelectedPlaceToSidebar(googlePlace){
     else{
         var ul = searchedPlaces.children[0];
     }
-    var name = document.createTextNode(googlePlace.title);
+    var name = document.createTextNode(googlePlace.name);
     var li = document.createElement('li');
     li.className = 'list-group-item';
     li.appendChild(name);
+    // inserting click event to display on map
+    var marker = new google.maps.Marker({
+        position: { 
+            lat: googlePlace.geometry.location.lat(), 
+            lng: googlePlace.geometry.location.lng() 
+        }
+    });
+    marker.placeResult = googlePlace;
+    google.maps.event.addListener(marker, "click", showInfoWindow);
+    // setTimeout(dropMarker(marker))
+    li.onclick = function() {
+      google.maps.event.trigger(marker, "click");
+    };
     ul.appendChild(li);
     searchedPlaces.appendChild(ul);
 }
 
+// Get the place details for a hotel. Show the information in an info window,
+// anchored on the marker for the hotel that the user selected.
+function showInfoWindow() {
+  var marker = this;
+  placesService.getDetails({ placeId: marker.placeResult.place_id }, function(
+    place,
+    status
+  ) {
+    if (status !== google.maps.places.PlacesServiceStatus.OK) {
+      return;
+    }
+    infoWindow.open(map, marker);
+    buildIWContent(place);
+  });
+}
+
+
+// Load the place information into the HTML elements used by the info window.
+function buildIWContent(place) {
+  console.log(place);
+  document.getElementById("iw-icon").innerHTML =
+    '<img class="hotelIcon" ' + 'src="' + place.icon + '"/>';
+  document.getElementById("iw-url").innerHTML =
+    '<b><a href="' + place.url + '">' + place.name + "</a></b>";
+  document.getElementById("iw-address").textContent = place.vicinity;
+
+  if (place.formatted_phone_number) {
+    document.getElementById("iw-phone-row").style.display = "";
+    document.getElementById("iw-phone").textContent =
+      place.formatted_phone_number;
+  } else {
+    document.getElementById("iw-phone-row").style.display = "none";
+  }
+
+  // Assign a five-star rating to the hotel, using a black star ('&#10029;')
+  // to indicate the rating the hotel has earned, and a white star ('&#10025;')
+  // for the rating points not achieved.
+  if (place.rating) {
+    var ratingHtml = "";
+    for (var i = 0; i < 5; i++) {
+      if (place.rating < i + 0.5) {
+        ratingHtml += "&#10025;";
+      } else {
+        ratingHtml += "&#10029;";
+      }
+      document.getElementById("iw-rating-row").style.display = "";
+      document.getElementById("iw-rating").innerHTML = ratingHtml;
+    }
+  } else {
+    document.getElementById("iw-rating-row").style.display = "none";
+  }
+
+  // The regexp isolates the first part of the URL (domain plus subdomain)
+  // to give a short URL for displaying in the info window.
+  if (place.website) {
+    var fullUrl = place.website;
+    var website = hostnameRegexp.exec(place.website);
+    if (website === null) {
+      website = "http://" + place.website + "/";
+      fullUrl = website;
+    }
+    document.getElementById("iw-website-row").style.display = "";
+    document.getElementById("iw-website").textContent = website;
+  } else {
+    document.getElementById("iw-website-row").style.display = "none";
+  }
+}
+
+
 function initAutocomplete() {
-  var map = new google.maps.Map(document.getElementById("map"), {
+  map = new google.maps.Map(document.getElementById("map"), {
     center: bigBen,
     zoom: 13,
     mapTypeId: "roadmap"
   });
 
+  infoWindow = new google.maps.InfoWindow({
+    content: document.getElementById('info-content'),
+  });
+  placesService = new google.maps.places.PlacesService(map);
   // Create the search box and link it to the UI element.
   var input = document.getElementById("pac-input");
   var searchBox = new google.maps.places.SearchBox(input);
@@ -57,6 +163,7 @@ function initAutocomplete() {
 
     // Clear out the old markers.
     markers.forEach(function(marker) {
+      console.log(marker);
       marker.setMap(null);
     });
     markers = [];
@@ -81,7 +188,7 @@ function initAutocomplete() {
         title: place.name,
         position: place.geometry.location
       });
-      addPlaceToList(googlePlace);
+      addPlaceToList(place);
       // Create a marker for each place.
       markers.push(
         new google.maps.Marker({
