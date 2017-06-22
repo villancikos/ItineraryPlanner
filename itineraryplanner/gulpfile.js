@@ -6,6 +6,7 @@
 // Plugins
 var gulp = require('gulp'),
       pjson = require('./package.json'),
+      babel = require('gulp-babel'),
       gutil = require('gulp-util'),
       sass = require('gulp-sass'),
       autoprefixer = require('gulp-autoprefixer'),
@@ -23,7 +24,7 @@ var gulp = require('gulp'),
 
 
 // Relative paths function
-var pathsConfig = function (appName) {
+var pathsConfig = appName => {
   this.app = "./" + (appName || pjson.name);
 
   return {
@@ -35,7 +36,7 @@ var pathsConfig = function (appName) {
     images: this.app + '/static/images',
     js: this.app + '/static/js',
   }
-};
+}
 
 var paths = pathsConfig();
 
@@ -58,11 +59,16 @@ gulp.task('styles', function() {
 
 // Javascript minification
 gulp.task('scripts', function() {
-  return gulp.src(paths.js + '/project.js')
+  // return gulp.src(paths.js + '/project.js')
+  return gulp.src(paths.js+'**/*.js')  
+    .pipe(babel({
+      presets: ['es2015'],
+    }))
     .pipe(plumber()) // Checks for errors
     .pipe(uglify()) // Minifies the js
     .pipe(rename({ suffix: '.min' }))
-    .pipe(gulp.dest(paths.js));
+    // .pipe(gulp.dest(paths.js));
+    .pipe(gulp.dest(paths.app+"/static/build/all.js"));    
 });
 
 // Image compression
@@ -115,3 +121,11 @@ gulp.task('plus', function() {
 gulp.task('default', function() {
     runSequence(['styles', 'scripts', 'imgCompression'], 'browserSync', 'watch', 'runServer');
 });
+
+// gulp.task('withBabel', () =>{
+//   return gulp.src(paths.app)
+//     .pipe(babel({
+//       presets: ['es2015']
+//     }))
+//     .pipe(gulp.dest('dist'))
+// });

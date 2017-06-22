@@ -1,6 +1,6 @@
 from django.conf.urls import url
 
-from .views import ExamplesMenu, AutoCompleteExample, DistancesExample, SearchBoxExample, SearchAttempt
+from .views import ReactAttempt, ExamplesMenu, AutoCompleteExample, DistancesExample, SearchBoxExample, SearchAttempt
 
 urlpatterns = [
     url(regex=r"^$",
@@ -22,4 +22,7 @@ urlpatterns = [
     url(regex=r"^attempt/",
     view=SearchAttempt.as_view(),
     name="attempt"),
+    url(regex=r"^react/",
+    view=ReactAttempt.as_view(),
+    name="react"),
 ]

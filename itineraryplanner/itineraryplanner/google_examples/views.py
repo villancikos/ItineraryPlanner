@@ -14,3 +14,6 @@ class SearchBoxExample(TemplateView):
 
 class SearchAttempt(TemplateView):
     template_name = 'google-examples/attempt.html'
+
+class ReactAttempt(TemplateView):
+    template_name = 'google-examples/reactattempt.html'
