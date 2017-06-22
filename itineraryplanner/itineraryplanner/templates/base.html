@@ -1,4 +1,7 @@
-{% load staticfiles i18n %}<!DOCTYPE html>
+{% load staticfiles i18n %}
+<!DOCTYPE html>
+{% load render_bundle from webpack_loader %}
+
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -77,7 +80,7 @@
       {% endif %}
 
       {% block content %}
-        <p>Use this document as a way to quick start any new project.</p>
+      <div id="root"></div>
       {% endblock content %}
 
     </div> <!-- /container -->
@@ -97,7 +100,8 @@
 
       <!-- place project specific Javascript in this file -->
       
-      <script src="{% static 'js/project.js' %}"></script>
+      {% comment %}<script src="{% static 'build/bundle.js' %}"></script>{% endcomment %}
+      {% render_bundle 'main' %}
       
 
     {% endblock javascript %}
