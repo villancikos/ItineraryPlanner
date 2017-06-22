@@ -11,3 +11,6 @@ class DistancesExample(TemplateView):
 
 class SearchBoxExample(TemplateView):
     template_name = 'google-examples/searchbox.html'
+
+class SearchAttempt(TemplateView):
+    template_name = 'google-examples/attempt.html'

@@ -1,6 +1,6 @@
 from django.conf.urls import url
 
-from .views import ExamplesMenu, AutoCompleteExample, DistancesExample, SearchBoxExample
+from .views import ExamplesMenu, AutoCompleteExample, DistancesExample, SearchBoxExample, SearchAttempt
 
 urlpatterns = [
     url(regex=r"^$",
@@ -14,8 +14,12 @@ urlpatterns = [
     url(regex=r"^distances/",
         view=DistancesExample.as_view(),
         name="distances"),
-        
+
     url(regex=r"^searchbox/",
-    view=SearchBoxExample.as_view(),
-    name="searchbox"),
+        view=SearchBoxExample.as_view(),
+        name="searchbox"),
+
+    url(regex=r"^attempt/",
+    view=SearchAttempt.as_view(),
+    name="attempt"),
 ]
