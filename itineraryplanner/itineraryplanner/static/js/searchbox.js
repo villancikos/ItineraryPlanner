@@ -6,6 +6,7 @@ window.onload = function() {
 var map, placesService, infoWindow;
 var markers = [];
 var placesSelected = {};
+var hostnameRegexp = new RegExp('^https?://.+?/');
 function addPlaceToList(googlePlace) {
     console.log(googlePlace);
     placesSelected[googlePlace.name] = googlePlace;
