@@ -6,7 +6,7 @@ window.onload = function() {
 var map, placesService, infoWindow;
 var markers = [];
 var placesSelected = {};
-var hostnameRegexp = new RegExp('^https?://.+?/');
+var hostnameRegexp = new RegExp('^https?://.+?/')
 
 function addPlaceToList(googlePlace) {
     placesSelected[googlePlace.name] = googlePlace;
@@ -72,6 +72,8 @@ function addSelectedPlaceToSidebar(googlePlaceMarker){
 // anchored on the marker for the hotel that the user selected.
 function showInfoWindow() {
   var marker = this;
+
+  console.log("Debugging Marker" , marker);
   placesService.getDetails({ placeId: marker.placeResult.place_id }, 
     function(place,status) {
       if (status !== google.maps.places.PlacesServiceStatus.OK) {
@@ -147,12 +149,15 @@ function populateMarkers(place) {
     map: map,
     icon: icon,
     title: place.name,
-    position: place.geometry.location
+    position: place.geometry.location,
+    animation: google.maps.Animation.DROP,
   });
   // Fill the marker to the global Dict
   googlePlaceMarker.placeResult = place;
   google.maps.event.addListener(googlePlaceMarker, "click", showInfoWindow);
-  markers.push(googlePlaceMarker);
+  window.setTimeout(function() {
+    markers.push(googlePlaceMarker);
+  }, 15000);
   addPlaceToList(place);
   addSelectedPlaceToSidebar(googlePlaceMarker);
   // return googlePlaceMarker;
@@ -177,6 +182,8 @@ function initMaps() {
   // init container for the place of interest information
   infoWindow = new google.maps.InfoWindow({
     content: document.getElementById('info-content'),
+    // TODO: Check why originally is misplaced.
+    // pixelOffset: new google.maps.Size(-28,0)
   });
   // init placesService instance 
   placesService = new google.maps.places.PlacesService(map);
