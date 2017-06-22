@@ -1,17 +1,16 @@
 var bigBen = { lat: 51.510357, lng: -0.116773 };
 window.onload = function() {
-  initAutocomplete();
+  initMaps();
 };
 
 var map, placesService, infoWindow;
 var markers = [];
 var placesSelected = {};
-var hostnameRegexp = new RegExp('^https?://.+?/');
+var hostnameRegexp = new RegExp('^https?://.+?/')
+
 function addPlaceToList(googlePlace) {
-    console.log(googlePlace);
     placesSelected[googlePlace.name] = googlePlace;
-    addSelectedPlaceToSidebar(googlePlace);
-    console.log(placesSelected);
+    // addSelectedPlaceToSidebar(googlePlace);
 }
 
 /* 
@@ -31,58 +30,63 @@ function initMap() {
   });
 }
 */
-function addSelectedPlaceToSidebar(googlePlace){
-    // properties I want:
-    // title, position.lat, position.lng.
-    var searchedPlaces = document.getElementById('searchedPlaces');
-    if (!searchedPlaces.children.length) {
-        var ul = document.createElement('ul');
-        ul.className = 'list-group';
-    }
-    else{
-        var ul = searchedPlaces.children[0];
-    }
-    var name = document.createTextNode(googlePlace.name);
-    var li = document.createElement('li');
-    li.className = 'list-group-item';
-    li.appendChild(name);
-    // inserting click event to display on map
-    var marker = new google.maps.Marker({
-        position: { 
-            lat: googlePlace.geometry.location.lat(), 
-            lng: googlePlace.geometry.location.lng() 
-        }
-    });
-    marker.placeResult = googlePlace;
-    google.maps.event.addListener(marker, "click", showInfoWindow);
-    // setTimeout(dropMarker(marker))
-    li.onclick = function() {
-      google.maps.event.trigger(marker, "click");
-    };
-    ul.appendChild(li);
-    searchedPlaces.appendChild(ul);
+
+function addSelectedPlaceToSidebar(googlePlaceMarker){
+  // if the place already exists in our list ignore
+  var searchedPlaces = document.getElementById('searchedPlaces');
+  if (!searchedPlaces.children.length) {
+      var ul = document.createElement('ul');
+      ul.className = 'list-group';
+  }
+  else{
+      var ul = searchedPlaces.children[0];
+  }
+  var name = document.createTextNode(googlePlaceMarker.title);
+  var li = document.createElement('li');
+  li.className = 'list-group-item';
+  li.appendChild(name);
+  // inserting click event to display on map
+  // var marker = new google.maps.Marker({
+  //     position: { 
+  //         lat: googlePlace.geometry.location.lat(), 
+  //         lng: googlePlace.geometry.location.lng() 
+  //     }
+  // });
+  // marker.placeResult = googlePlace;
+  // google.maps.event.addListener(marker, "click", showInfoWindow);
+  // setTimeout(dropMarker(marker))
+
+  li.addEventListener('click', function() {
+    google.maps.event.trigger(googlePlaceMarker, 'click');
+    console.log("clicked");
+  }, false);
+
+  // li.onclick = function() {
+  //   google.maps.event.trigger(marker, "click");
+  // };
+  ul.appendChild(li); 
+  searchedPlaces.appendChild(ul);
 }
 
 // Get the place details for a hotel. Show the information in an info window,
 // anchored on the marker for the hotel that the user selected.
 function showInfoWindow() {
   var marker = this;
-  placesService.getDetails({ placeId: marker.placeResult.place_id }, function(
-    place,
-    status
-  ) {
-    if (status !== google.maps.places.PlacesServiceStatus.OK) {
-      return;
-    }
-    infoWindow.open(map, marker);
-    buildIWContent(place);
-  });
+
+  console.log("Debugging Marker" , marker);
+  placesService.getDetails({ placeId: marker.placeResult.place_id }, 
+    function(place,status) {
+      if (status !== google.maps.places.PlacesServiceStatus.OK) {
+        return;
+      }
+      infoWindow.open(map, marker);
+      buildIWContent(place);
+    });
 }
 
 
 // Load the place information into the HTML elements used by the info window.
 function buildIWContent(place) {
-  console.log(place);
   document.getElementById("iw-icon").innerHTML =
     '<img class="hotelIcon" ' + 'src="' + place.icon + '"/>';
   document.getElementById("iw-url").innerHTML =
@@ -131,18 +135,59 @@ function buildIWContent(place) {
   }
 }
 
+function populateMarkers(place) {
+  //Each found place need an icon.
+  var icon = {
+    url: place.icon,
+    size: new google.maps.Size(80, 80),
+    origin: new google.maps.Point(0, 0),
+    anchor: new google.maps.Point(17, 34),
+    scaledSize: new google.maps.Size(25, 25)
+  };
+  // Create marker from place
+  var googlePlaceMarker = new google.maps.Marker({
+    map: map,
+    icon: icon,
+    title: place.name,
+    position: place.geometry.location,
+    animation: google.maps.Animation.DROP,
+  });
+  // Fill the marker to the global Dict
+  googlePlaceMarker.placeResult = place;
+  google.maps.event.addListener(googlePlaceMarker, "click", showInfoWindow);
+  window.setTimeout(function() {
+    markers.push(googlePlaceMarker);
+  }, 15000);
+  addPlaceToList(place);
+  addSelectedPlaceToSidebar(googlePlaceMarker);
+  // return googlePlaceMarker;
+}
 
-function initAutocomplete() {
+// Helper function to remove all the markers from the map.
+function clearOldMarkers(){
+  // Clear out the old markers.
+    markers.forEach(function(marker) {
+      marker.setMap(null);
+    });
+    markers = [];
+}
+
+function initMaps() {
+  // initializing Map
   map = new google.maps.Map(document.getElementById("map"), {
     center: bigBen,
     zoom: 13,
     mapTypeId: "roadmap"
-  });
-
+  }); 
+  // init container for the place of interest information
   infoWindow = new google.maps.InfoWindow({
     content: document.getElementById('info-content'),
+    // TODO: Check why originally is misplaced.
+    // pixelOffset: new google.maps.Size(-28,0)
   });
+  // init placesService instance 
   placesService = new google.maps.places.PlacesService(map);
+
   // Create the search box and link it to the UI element.
   var input = document.getElementById("pac-input");
   var searchBox = new google.maps.places.SearchBox(input);
@@ -152,6 +197,7 @@ function initAutocomplete() {
   map.addListener("bounds_changed", function() {
     searchBox.setBounds(map.getBounds());
   });
+
   // remove the markers init so I can globalize everything
   // var markers = [];
   // Listen for the event fired when the user selects a prediction and retrieve
@@ -161,13 +207,13 @@ function initAutocomplete() {
     if (places.length == 0) {
       return;
     }
-
+    // Won't clear the results unless explicitly called.
     // Clear out the old markers.
-    markers.forEach(function(marker) {
-      console.log(marker);
-      marker.setMap(null);
-    });
-    markers = [];
+    // markers.forEach(function(marker) {
+    //   console.log(marker);
+    //   marker.setMap(null);
+    // });
+    // markers = [];
 
     // For each place, get the icon, name and location.
     var bounds = new google.maps.LatLngBounds();
@@ -176,31 +222,32 @@ function initAutocomplete() {
         console.log("Returned place contains no geometry");
         return;
       }
-      var icon = {
-        url: place.icon,
-        size: new google.maps.Size(80, 80),
-        origin: new google.maps.Point(0, 0),
-        anchor: new google.maps.Point(17, 34),
-        scaledSize: new google.maps.Size(25, 25)
-      };
-      var googlePlace = new google.maps.Marker({
-        map: map,
-        icon: icon,
-        title: place.name,
-        position: place.geometry.location
-      });
+      // Each found place need an icon.
+      // var icon = {
+      //   url: place.icon,
+      //   size: new google.maps.Size(80, 80),
+      //   origin: new google.maps.Point(0, 0),
+      //   anchor: new google.maps.Point(17, 34),
+      //   scaledSize: new google.maps.Size(25, 25)
+      // };
+      // Remove this function to make it global
+      // var googlePlace = new google.maps.Marker({
+      //   map: map,
+      //   icon: icon,
+      //   title: place.name,
+      //   position: place.geometry.location
+      // });
       // add the place to the global markers and return it
       populateMarkers(place);
-      addPlaceToList(place);
       // Create a marker for each place.
-      markers.push(
-        new google.maps.Marker({
-          map: map,
-          icon: icon,
-          title: place.name,
-          position: place.geometry.location
-        })
-      );
+      // markers.push(
+      //   new google.maps.Marker({
+      //     map: map,
+      //     icon: icon,
+      //     title: place.name,
+      //     position: place.geometry.location
+      //   })
+      // );
 
       if (place.geometry.viewport) {
         // Only geocodes have viewport.
