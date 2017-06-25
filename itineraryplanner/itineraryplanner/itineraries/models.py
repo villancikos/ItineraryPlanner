@@ -2,8 +2,8 @@ from django.conf import settings
 from django.db import models
 from model_utils import Choices
 from django.utils.translation import ugettext_lazy as _
-
 from model_utils.models import TimeStampedModel
+
 class Itinerary(TimeStampedModel):
     STATUS_CHOICES = Choices(
         (0,'PENDING','pending'),
@@ -90,5 +90,3 @@ class PlaceOfInterest(TimeStampedModel):
     # Meta and String
     def __str__(self):
         return 'POI {0}'.format(name)
-
-
