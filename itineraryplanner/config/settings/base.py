@@ -56,6 +56,7 @@ LOCAL_APPS = [
     # custom users app
     'itineraryplanner.users.apps.UsersConfig',
     # Your stuff: custom apps go here
+    'itineraryplanner.itineraries',
 ]
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
