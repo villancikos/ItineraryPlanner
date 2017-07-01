@@ -3,7 +3,7 @@
         lat: 51.50770709999999, 
         lng: -0.12877930000001925};
     var map, placesService, infoWindow;
-    const markers = [];
+    var markers = [];
     var placesSelected = {};
     var hostnameRegexp = new RegExp('^https?://.+?/');
     // debugger;
@@ -113,13 +113,14 @@ $('#submitPlaceSelection').on('click', function(e) {
 
 
 function jsonifyPlace(marker){
-  var $marker_obj = {
+  var $marker_obj =  marker.placeResult.place_id[
+  {
     "place_id": marker.placeResult.place_id,
     "is_hotel": false,
     "name": marker.placeResult.name,
     "lat": marker.position.lat(),
     "lng": marker.position.lng(),
-  }
+  }]
   var marker_json = JSON.stringify($marker_obj, null, 4);
   return marker_json;
 }

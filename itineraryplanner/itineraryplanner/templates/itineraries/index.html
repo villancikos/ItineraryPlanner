@@ -74,6 +74,7 @@
             };
             var map, placesService, infoWindow;
             var markers = [];
+            var listadeobjectos = [];
             var placesSelected = {};
             var hostnameRegexp = new RegExp('^https?://.+?/');
             // debugger;
@@ -127,6 +128,11 @@
 
             $('#submitPlaceSelection').on('click', function (e) {
                 e.preventDefault();
+                var listy=[]
+                markers.map(function(marker){
+                    return listy.push(jsonifyTwo(marker));
+                });
+                json_listy = JSON.stringify(listy);
                 var csrftoken = Cookies.get('csrftoken');
                 function csrfSafeMethod(method) {
                     // these HTTP methods do not require CSRF protection
@@ -142,7 +148,7 @@
                 $.ajax({
                     type: "POST",
                     url: success_url,
-                    data: { placesToVisit : $('#id_placesToVisit').val() },
+                    data: { placesToVisit : json_listy },
                     success: function (json) {
                         // What we receive from success on server side.
                         console.log("Was successful");
@@ -166,6 +172,33 @@
                 }
                 var marker_json = JSON.stringify($marker_obj, null, 4);
                 return marker_json;
+            }
+
+            function jsonifyOld(marker){
+                var $marker_obj = {}
+                $marker_obj[marker.placeResult.place_id] = {
+                    "place_id":marker.placeResult.place_id,
+                    "is_hotel": false,
+                    "name": marker.placeResult.name,
+                    "lat": marker.position.lat(),
+                    "lng": marker.position.lng()
+                }
+                console.log($marker_obj);
+                //return JSON.stringify($marker_obj, null, 4);
+                return $marker_obj
+            }
+
+            function jsonifyTwo(marker){
+                var $marker_obj = {
+                    "place_id":marker.placeResult.place_id,
+                    "is_hotel": false,
+                    "name": marker.placeResult.name,
+                    "lat": marker.position.lat(),
+                    "lng": marker.position.lng()
+                }
+                console.log($marker_obj);
+                //return JSON.stringify($marker_obj, null, 4);
+                return $marker_obj
             }
 
             function addPlaceToList(googlePlace) {
@@ -297,8 +330,10 @@
                 google.maps.event.addListener(googlePlaceMarker, "click", showInfoWindow);
                 markers.push(googlePlaceMarker);
                 var json_markers = markers.map(function (place) {
-                    return jsonifyPlace(place);
+                    //return jsonifyPlace(place);
+                    return jsonifyTwo(place);                    
                 });
+                //console.log(json_markers);
                 $('#id_placesToVisit').val(json_markers);
                 addPlaceToList(place);
                 addSelectedPlaceToSidebar(googlePlaceMarker);
