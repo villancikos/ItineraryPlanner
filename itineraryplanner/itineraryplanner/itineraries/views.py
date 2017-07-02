@@ -1,9 +1,16 @@
+"""
+This view receives the input from the user. 
+Validates it and creates a POI or updates it.
+Then creates the ItineraryStep for each possible combination.
+Adds everything to the Itinerary model and sends it to the 
+server to compute the desired TOUR.
+"""
 import json
-from django.shortcuts import render
 from django.views.generic.edit import FormView
 from .models import PlaceOfInterest
 from .forms import PlacesOfInterestForm
 from django.core.urlresolvers import reverse, reverse_lazy
+
 
 class PlacesOfInterestView(FormView):
     """
@@ -47,21 +54,29 @@ class PlacesOfInterestView(FormView):
         json_data = form.cleaned_data['placesToVisit']
         python_data = json.loads(json_data)
         for place in python_data:
-            print("Place with id: {0} and title: {1} \n Coordinates lat:{2},lng:{3}".format(
-                place['place_id'],
-                place['is_hotel'],
-                place['name'],
-                place['lat'],
-                place['lng']
-            ))
-            obj,_ = PlaceOfInterest.objects.get_or_create(
-                place_id = place['place_id'],
-                is_hotel = place['is_hotel'],                
-                name = place['name'],
-                lat = place['lat'],
-                lng = place['lng']
+            # print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}".format(
+            #     place['place_id'],
+            #     place['is_hotel'],
+            #     place['name'],
+            #     place['lat'],
+            #     place['lng']
+            # ))
+            # we first try update the place in case it exists.
+            # otherwise we just create it and carry on with the
+            # relations with other Models in the database
+            obj, created = PlaceOfInterest.objects.update_or_create(
+                place_id=place['place_id'],
+                defaults={
+                    "is_hotel": place['is_hotel'],
+                    "name": place['name'],
+                    "lat": place['lat'],
+                    "lng": place['lng']
+                }
             )
-            print(obj, _ )
-            
-        
+            if created:
+                print("'{}' was created successfully".format(obj.name))
+            else:
+                print("'{0}' was already in the database with id={1}".format(
+                    obj.name, obj.place_id))
+            print(obj, ", was created?: ", created)
         return super(PlacesOfInterestView, self).form_valid(form)
