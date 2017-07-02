@@ -36,8 +36,8 @@ class PlacesOfInterestView(FormView):
         TBD
         """
         form = self.get_form()
-        # import ipdb; ipdb.set_trace()
-        if form.is_valid():
+        import ipdb; ipdb.set_trace()
+        if form.is_valid(): 
             return self.form_valid(form)
         else:
             return self.form_invalid(form)
