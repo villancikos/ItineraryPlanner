@@ -36,8 +36,8 @@ class PlacesOfInterestView(FormView):
         TBD
         """
         form = self.get_form()
-        import ipdb; ipdb.set_trace()
-        if form.is_valid(): 
+        # import ipdb; ipdb.set_trace()
+        if form.is_valid():
             return self.form_valid(form)
         else:
             return self.form_invalid(form)
@@ -50,10 +50,14 @@ class PlacesOfInterestView(FormView):
     def form_valid(self, form):
         # This method is called when valid form data has been POSTed.
         # It should return an HttpResponse.
-        # import ipdb; ipdb.set_trace()
-        json_data = form.cleaned_data['placesToVisit']
-        python_data = json.loads(json_data)
-        for place in python_data:
+        import ipdb
+        ipdb.set_trace()
+        placesToVisitJson = form.cleaned_data['placesToVisit']
+        placesToVisitObject = json.loads(placesToVisitJson)
+        distanceMatrixJson = form.cleaned_data['distanceMatrix']
+        distanceMatrixObject = json.loads(distanceMatrixJson)
+
+        for place in placesToVisitObject:
             # print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}".format(
             #     place['place_id'],
             #     place['is_hotel'],
@@ -79,4 +83,5 @@ class PlacesOfInterestView(FormView):
                 print("'{0}' was already in the database with id={1}".format(
                     obj.name, obj.place_id))
             print(obj, ", was created?: ", created)
+
         return super(PlacesOfInterestView, self).form_valid(form)

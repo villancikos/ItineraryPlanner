@@ -150,22 +150,14 @@
                 unitSystem: google.maps.UnitSystem.METRIC,
                 avoidHighways: false,
                 avoidTolls: false
-            }).then(function (response, status) {
+            }, function (response, status) {
                 if (status !== 'OK') {
                     console.log('Error was: ' + status);
-                    d.reject();
                 } else {
                     distanceMatrix = response.rows;
                     console.log("TheResponse:", response.rows);
                 }
                 console.log("YA ACABO CALLBACK");
-                d.resolve();
-            });
-        }
-        $('#submitPlaceSelection').on('click', function (e) {
-            e.preventDefault();
-            console.log($(this));
-            distanceMatrixCall().then(function () {
                 var toSubmitList = []
                 //markers.map(function(marker){});
                 markers.map(function (marker) {
@@ -173,25 +165,11 @@
                 });
                 var toSubmitJsonList = JSON.stringify(toSubmitList);
                 var toSubmitJsonMatrix = JSON.stringify(distanceMatrix);
-                console.log(toSubmitJsonMatrix);
-                //$('#id_placesToVisit').val(toSubmitJsonList);
-                //$('#id_distanceMx').val(toSubmitJsonMatrix);
-                var csrftoken = Cookies.get('csrftoken');
-                function csrfSafeMethod(method) {
-                    // these HTTP methods do not require CSRF protection
-                    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-                }
-                $.ajaxSetup({
-                    beforeSend: function (xhr, settings) {
-                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                            xhr.setRequestHeader("X-CSRFToken", csrftoken);
-                        }
-                    }
-                });
+                //console.log(toSubmitJsonMatrix);
                 $.ajax({
                     type: "POST",
                     url: successURL,
-                    data: { placesToVisit: toSubmitJsonList, distanceMx: distanceMatrix },
+                    data: { placesToVisit: toSubmitJsonList, distanceMatrix: toSubmitJsonMatrix },
                     success: function (json) {
                         // What we receive from success on server side.
                         console.log("YA ACABO SUCCESS?");
@@ -201,6 +179,25 @@
                         console.log("Was error");
                     },
                 });
+            });
+        }
+        $('#submitPlaceSelection').on('click', function (e) {
+            e.preventDefault();
+            console.log($(this));
+            distanceMatrixCall()
+            //$('#id_placesToVisit').val(toSubmitJsonList);
+            //$('#id_distanceMx').val(toSubmitJsonMatrix);
+            var csrftoken = Cookies.get('csrftoken');
+            function csrfSafeMethod(method) {
+                // these HTTP methods do not require CSRF protection
+                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+            }
+            $.ajaxSetup({
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
             });
         });
         $('#clearPlaces').on('click', function (e) { clearOldMarkers(); });
