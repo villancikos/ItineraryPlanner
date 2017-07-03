@@ -83,7 +83,7 @@ var destinationB = {lat: 50.087, lng: 14.421};
 
         var service = new google.maps.DistanceMatrixService;
         service.getDistanceMatrix({
-          origins: [origin1],
+          origins: destinationArray,
           //destinations: [destinationA, destinationB, destinationC],
           destinations:destinationArray,
           travelMode: 'WALKING',

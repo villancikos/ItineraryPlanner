@@ -6,10 +6,13 @@ Adds everything to the Itinerary model and sends it to the
 server to compute the desired TOUR.
 """
 import json
-from django.views.generic.edit import FormView
-from .models import PlaceOfInterest
-from .forms import PlacesOfInterestForm
+
 from django.core.urlresolvers import reverse, reverse_lazy
+from django.http import HttpResponse
+from django.views.generic.edit import FormView
+
+from .forms import PlacesOfInterestForm
+from .models import PlaceOfInterest
 
 
 class PlacesOfInterestView(FormView):
@@ -25,6 +28,13 @@ class PlacesOfInterestView(FormView):
     form_class = PlacesOfInterestForm
     success_url = reverse_lazy('itineraries:itineraryPicker')
 
+    def render_to_json_response(self, context, **response_kwargs):
+        """Render a json response of the context."""
+
+        data = json.dumps(context)
+        response_kwargs['content_type'] = 'application/json'
+        return HttpResponse(data, **response_kwargs)
+
     def get_context_data(self, **kwargs):
         context = super(PlacesOfInterestView,
                         self).get_context_data(**kwargs)
@@ -36,7 +46,6 @@ class PlacesOfInterestView(FormView):
         TBD
         """
         form = self.get_form()
-        # import ipdb; ipdb.set_trace()
         if form.is_valid():
             return self.form_valid(form)
         else:
@@ -48,10 +57,12 @@ class PlacesOfInterestView(FormView):
         return super(PlacesOfInterestView, self).form_invalid(form)
 
     def form_valid(self, form):
+        response = super(PlacesOfInterestView, self).form_valid(form)
         # This method is called when valid form data has been POSTed.
         # It should return an HttpResponse.
-        import ipdb
-        ipdb.set_trace()
+        import pdb
+        pdb.set_trace()
+
         placesToVisitJson = form.cleaned_data['placesToVisit']
         placesToVisitObject = json.loads(placesToVisitJson)
         distanceMatrixJson = form.cleaned_data['distanceMatrix']
@@ -83,5 +94,10 @@ class PlacesOfInterestView(FormView):
                 print("'{0}' was already in the database with id={1}".format(
                     obj.name, obj.place_id))
             print(obj, ", was created?: ", created)
-
-        return super(PlacesOfInterestView, self).form_valid(form)
+        if self.request.is_ajax():
+            # Request is ajax, send a json response
+            data = {
+                'message:': 'Whatevs'
+            }
+            return self.render_to_json_response(data)
+        return response

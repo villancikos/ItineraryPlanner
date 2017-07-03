@@ -68,6 +68,7 @@
     {% comment %}
     <script type="text/javascript" src="{% static 'js/itineraryPicker.js' %}"></script>{% endcomment %}
     <script>
+        var ferTestList = [];
         var successURL = "{{success_url}}";
         var distanceMatrix = [];
         var mapInitialLocation = {
@@ -113,6 +114,8 @@
             // For each place, get the icon, name and location.
             var bounds = new google.maps.LatLngBounds();
             places.forEach(function (place) {
+                console.log("places",place);
+                ferTestList.push(place);
                 if (!place.geometry) {
                     console.log("Returned place contains no geometry");
                     return;
@@ -141,9 +144,9 @@
         };
 
         function distanceMatrixCall() {
-            var service = new google.maps.DistanceMatrixService;
-            var d = new $.Deferred;
-            service.getDistanceMatrix({
+            var computedDistances = [];
+            var gs = new google.maps.DistanceMatrixService;
+            gs.getDistanceMatrix({
                 origins: placesSelected,
                 destinations: placesSelected,
                 travelMode: 'WALKING',
@@ -152,27 +155,46 @@
                 avoidTolls: false
             }, function (response, status) {
                 if (status !== 'OK') {
-                    console.log('Error was: ' + status);
+                    console.log("Error was: " + status);
                 } else {
-                    distanceMatrix = response.rows;
-                    console.log("TheResponse:", response.rows);
+                    console.log(response);
+                    computedDistances.push(response);
                 }
-                console.log("YA ACABO CALLBACK");
                 var toSubmitList = []
-                //markers.map(function(marker){});
                 markers.map(function (marker) {
                     return toSubmitList.push(make_json_marker(marker));
                 });
+                // Section in which we format the data with the distances
+                var beautyList = [];
+                for (var i = 0; i < computedDistances[0].originAddresses.length; i++) {
+                    var results = computedDistances[0].rows[i].elements;
+                    for (var j = 0; j < results.length; j++) {
+                        if (computedDistances[0].originAddresses[i] != computedDistances[0].destinationAddresses[j]) {
+                            console.log(computedDistances[0].originAddresses[i], " to: ", computedDistances[0].destinationAddresses[j]);
+                            console.log("in...", results[j].duration.text);
+                            var beautyObj = {};
+                            beautyObj['from'] = computedDistances[0].originAddresses[i];
+                            beautyObj['to'] = computedDistances[0].destinationAddresses[j];
+                            beautyObj['durationText'] = results[j].duration.text;
+                            beautyObj['durationSeconds'] = results[j].duration.value;
+                            beautyList.push(beautyObj);
+                        }
+                    }
+                }
+                var toSubmitBeautyJson = JSON.stringify(beautyList);
+                // End of the section. TODO: Refactor it.
+
                 var toSubmitJsonList = JSON.stringify(toSubmitList);
-                var toSubmitJsonMatrix = JSON.stringify(distanceMatrix);
+                var toSubmitJsonMatrix = JSON.stringify(computedDistances);
                 //console.log(toSubmitJsonMatrix);
                 $.ajax({
                     type: "POST",
                     url: successURL,
-                    data: { placesToVisit: toSubmitJsonList, distanceMatrix: toSubmitJsonMatrix },
+                    data: { placesToVisit: toSubmitJsonList, distanceMatrix: toSubmitBeautyJson },
                     success: function (json) {
                         // What we receive from success on server side.
-                        console.log("YA ACABO SUCCESS?");
+                        console.log("success!");
+                        console.log(json);
                     },
                     error: function (json) {
                         // in case of error we get this from server
@@ -180,13 +202,17 @@
                     },
                 });
             });
-        }
+        };
+
+        // Listener for the submit inside the sidebar list with selectedPlaces.
         $('#submitPlaceSelection').on('click', function (e) {
             e.preventDefault();
-            console.log($(this));
+            // pending to disable button to stop user submitting turbo madness
+            //console.log($(this));
+            // DistanceMatrixCall goes to external Google Service
+            // Therefore we wrap it up in a different function with
+            // its callback.
             distanceMatrixCall()
-            //$('#id_placesToVisit').val(toSubmitJsonList);
-            //$('#id_distanceMx').val(toSubmitJsonMatrix);
             var csrftoken = Cookies.get('csrftoken');
             function csrfSafeMethod(method) {
                 // these HTTP methods do not require CSRF protection
@@ -200,6 +226,8 @@
                 }
             });
         });
+
+        // Listener for Clear button in case user wants to delete every marker from map
         $('#clearPlaces').on('click', function (e) { clearOldMarkers(); });
 
         function make_json_marker(marker) {
