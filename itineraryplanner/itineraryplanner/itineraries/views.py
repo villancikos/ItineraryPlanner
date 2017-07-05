@@ -6,14 +6,15 @@ Adds everything to the Itinerary model and sends it to the
 server to compute the desired TOUR.
 """
 import json
+import googlemaps
 
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.http import HttpResponse
 from django.views.generic.edit import FormView
 
 from .forms import PlacesOfInterestForm
-from .models import PlaceOfInterest
-
+from .models import PlaceOfInterest, ItineraryStep, Itinerary
+gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
 
 class PlacesOfInterestView(FormView):
     """
@@ -60,8 +61,6 @@ class PlacesOfInterestView(FormView):
         response = super(PlacesOfInterestView, self).form_valid(form)
         # This method is called when valid form data has been POSTed.
         # It should return an HttpResponse.
-        import pdb
-        pdb.set_trace()
 
         placesToVisitJson = form.cleaned_data['placesToVisit']
         placesToVisitObject = json.loads(placesToVisitJson)
@@ -69,13 +68,14 @@ class PlacesOfInterestView(FormView):
         distanceMatrixObject = json.loads(distanceMatrixJson)
 
         for place in placesToVisitObject:
-            # print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}".format(
-            #     place['place_id'],
-            #     place['is_hotel'],
-            #     place['name'],
-            #     place['lat'],
-            #     place['lng']
-            # ))
+            print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}".format(
+                place['place_id'],
+                place['is_hotel'],
+                place['name'],
+                place['lat'],
+                place['lng']
+            ))
+
             # we first try update the place in case it exists.
             # otherwise we just create it and carry on with the
             # relations with other Models in the database
@@ -94,6 +94,39 @@ class PlacesOfInterestView(FormView):
                 print("'{0}' was already in the database with id={1}".format(
                     obj.name, obj.place_id))
             print(obj, ", was created?: ", created)
+        
+        # import pdb
+        # pdb.set_trace()
+        # Placeholder Itinerary. TODO
+        # Create an Itinerary Object to hold the tour.
+        itinerary = Itinerary.objects.create()
+        # Traverse all the possible origins
+        for origin in placesToVisitObject:
+            # Traverse all the possible destinations
+            for destination in placesToVisitObject:
+                # for each destination check that is not the same as origin
+                # then save the object as an Itinerary Step and compute duration of trip
+                if destination != origin:
+                    origin_poi = PlaceOfInterest.objects.filter(place_id=origin['place_id']).get()
+                    destination_poi = PlaceOfInterest.objects.filter(place_id=destination['place_id']).get()
+                    it_step = ItineraryStep.objects.create(
+                        origin = origin_poi,
+                        destination = destination_poi,
+                        itinerary = itinerary,
+                        method = ItineraryStep.METHOD_CHOICES.WALK
+                    )
+                    dmx = gmaps.distance_matrix(
+                        origins='place_id:{}'.format(origin['place_id']),
+                        destinations='place_id:{}'.format(destination['place_id']),
+                        mode="walking",
+                        language="english"
+                        )
+                    duration = dmx['rows'][0]['elements'][0]['duration']['value']
+                    it_step.duration = duration
+                    it_step.save()
+                else:
+                    print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
+
         if self.request.is_ajax():
             # Request is ajax, send a json response
             data = {

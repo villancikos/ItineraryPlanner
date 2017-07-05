@@ -40,25 +40,24 @@ class PlaceOfInterest(TimeStampedModel):
     )
     is_hotel = models.BooleanField(
         default=False,
-
     )
     name = models.CharField(
         max_length=255,
     )
     lat = models.DecimalField(
         _('latitude'),
-        max_digits=9,
-        decimal_places=6
+        max_digits=13,
+        decimal_places=10
     )
     lng = models.DecimalField(
         _('longitude'),
-        max_digits=9,
-        decimal_places=6
+        max_digits=13,
+        decimal_places=10
     )
 
     # Meta and String
     def __str__(self):
-        return 'POI:{0}'.format(self.name)
+        return '{0}'.format(self.name)
 
 
 class Itinerary(TimeStampedModel):
@@ -71,8 +70,10 @@ class Itinerary(TimeStampedModel):
         (2, 'RUNNING', 'running'),
         (3, 'ERROR', 'error'),
     )
-    user = models.ManyToManyField(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
     )
     status = models.PositiveSmallIntegerField(
         choices=STATUS_CHOICES,
@@ -92,19 +93,23 @@ class ItineraryStep(TimeStampedModel):
         (2, 'CAR', 'car'),
         (3, 'TUBE', 'tube'),
     )
-    origin = models.OneToOneField(
+    origin = models.ForeignKey(
         PlaceOfInterest,
         related_name="origin",
-        verbose_name="the origin place"
+        verbose_name="the origin place",
+        null=False,
     )
-    destination = models.OneToOneField(
+    destination = models.ForeignKey(
         PlaceOfInterest,
         related_name="destination",
-        verbose_name="the destination place"
+        verbose_name="the destination place",
+        null=False,
     )
     itinerary = models.ForeignKey(
         Itinerary,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="steps",
+        verbose_name=_("itinerary"),
     )
     method = models.PositiveSmallIntegerField(
         choices=METHOD_CHOICES,
@@ -116,8 +121,13 @@ class ItineraryStep(TimeStampedModel):
     index = models.PositiveSmallIntegerField(
         default=0,
     )
+
     # Meta and String
+    class Meta:
+        verbose_name = _("Itinerary Step")
+        verbose_name_plural = _("Itinerary Steps")
+        ordering = ["created"]
 
     def __str__(self):
-        return 'ItineraryStep from {0} to {1}. Duration:{2}'.format(
+        return 'Itinerary step from {0} to {1}. Duration:{2}'.format(
             self.origin, self.destination, self.duration)

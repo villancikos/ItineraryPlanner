@@ -78,6 +78,8 @@
         var map, placesService, infoWindow;
         var markers = [];
         var placesSelected = [];
+        // this list holds the complete google response after search (place object)
+        var googleSearchedPlaces = [];
         var hostnameRegexp = new RegExp('^https?://.+?/');
         //var service = new google.maps.DistanceMatrixService;
         // debugger;
@@ -120,7 +122,7 @@
                     console.log("Returned place contains no geometry");
                     return;
                 }
-                //placesSelected.push(place);
+                googleSearchedPlaces.push("place_id:"+place.place_id);
                 placesSelected.push(place.geometry.location);
                 populateMarkers(place);
                 if (place.geometry.viewport) {
@@ -147,6 +149,9 @@
             var computedDistances = [];
             var gs = new google.maps.DistanceMatrixService;
             gs.getDistanceMatrix({
+                //origins:googleSearchedPlaces,
+                //destinations: googleSearchedPlaces,
+                // Replace this lines if we want to go back to normal behaviour
                 origins: placesSelected,
                 destinations: placesSelected,
                 travelMode: 'WALKING',
@@ -165,32 +170,32 @@
                     return toSubmitList.push(make_json_marker(marker));
                 });
                 // Section in which we format the data with the distances
-                var beautyList = [];
+                var rawDistanceMatrix = [];
                 for (var i = 0; i < computedDistances[0].originAddresses.length; i++) {
                     var results = computedDistances[0].rows[i].elements;
                     for (var j = 0; j < results.length; j++) {
                         if (computedDistances[0].originAddresses[i] != computedDistances[0].destinationAddresses[j]) {
                             console.log(computedDistances[0].originAddresses[i], " to: ", computedDistances[0].destinationAddresses[j]);
                             console.log("in...", results[j].duration.text);
-                            var beautyObj = {};
-                            beautyObj['from'] = computedDistances[0].originAddresses[i];
-                            beautyObj['to'] = computedDistances[0].destinationAddresses[j];
-                            beautyObj['durationText'] = results[j].duration.text;
-                            beautyObj['durationSeconds'] = results[j].duration.value;
-                            beautyList.push(beautyObj);
+                            var distanceMatrixObject = {};
+                            distanceMatrixObject['from'] = computedDistances[0].originAddresses[i];
+                            distanceMatrixObject['to'] = computedDistances[0].destinationAddresses[j];
+                            distanceMatrixObject['durationText'] = results[j].duration.text;
+                            distanceMatrixObject['durationSeconds'] = results[j].duration.value;
+                            rawDistanceMatrix.push(distanceMatrixObject);
                         }
                     }
                 }
-                var toSubmitBeautyJson = JSON.stringify(beautyList);
+                // 
+                var toSubmitFormattedJson = JSON.stringify(rawDistanceMatrix);
                 // End of the section. TODO: Refactor it.
-
                 var toSubmitJsonList = JSON.stringify(toSubmitList);
                 var toSubmitJsonMatrix = JSON.stringify(computedDistances);
                 //console.log(toSubmitJsonMatrix);
                 $.ajax({
                     type: "POST",
                     url: successURL,
-                    data: { placesToVisit: toSubmitJsonList, distanceMatrix: toSubmitBeautyJson },
+                    data: { placesToVisit: toSubmitJsonList, distanceMatrix: toSubmitFormattedJson },
                     success: function (json) {
                         // What we receive from success on server side.
                         console.log("success!");
@@ -388,6 +393,8 @@
                 marker.setMap(null);
             });
             markers = [];
+            placesSelected = [];
+            googleSearchedPlaces = [];
             $('#id_placesToVisit').val('');
             $('#id_distanceMx').val('');
             $('#searchedPlaces ul').empty();
