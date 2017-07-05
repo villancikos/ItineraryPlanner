@@ -2,6 +2,8 @@
     Key model inside the ItineraryPlanner that handles
     Itineraries, Places of Interest and their relationships.
 """
+import uuid
+
 from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
@@ -76,9 +78,15 @@ class Itinerary(TimeStampedModel):
         null=True,
     )
     status = models.PositiveSmallIntegerField(
+        _('status'),
         choices=STATUS_CHOICES,
         default=STATUS_CHOICES.PENDING,
         editable=False,
+    )
+    slug = models.UUIDField(
+        _('slug'),
+        default=uuid.uuid4,
+        editable=False
     )
 
 
@@ -126,7 +134,7 @@ class ItineraryStep(TimeStampedModel):
     class Meta:
         verbose_name = _("Itinerary Step")
         verbose_name_plural = _("Itinerary Steps")
-        ordering = ["created"]
+        ordering = ["index", "created"]
 
     def __str__(self):
         return 'Itinerary step from {0} to {1}. Duration:{2}'.format(

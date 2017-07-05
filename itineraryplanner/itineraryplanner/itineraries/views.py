@@ -126,7 +126,9 @@ class PlacesOfInterestView(FormView):
                     it_step.save()
                 else:
                     print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
-
+        # one liner to print steps just to verify
+        [print(step) for step in itinerary.steps.all()]
+        # TODO, create JSON response for the steps.
         if self.request.is_ajax():
             # Request is ajax, send a json response
             data = {
