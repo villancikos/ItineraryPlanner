@@ -1,0 +1,406 @@
+{% load staticfiles i18n %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- google api key AIzaSyB62WXl60F8rx74hDmKjj_sBJRwu5Wgnlo -->
+    <title>Auto-complete Map</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="{% static 'css/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    <link href="{% static 'css/searchbox.css' %}" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container-fluid wrapper">
+        <div class="row">
+            <div id="places" class="col-lg-4 d-flex flex-column p-0">
+                <input id="pac-input" class="controls" type="text" placeholder="Search Box">
+                <form id="placesSelectedForm" method="POST" action="{% url 'itineraries:itineraryPicker' %}">
+                    {% csrf_token %} {% comment %}<input type="hidden" name="" value="" />{% endcomment %}
+                    <input id="id_placesToVisit" type="hidden" name="placesToVisit" value="" />
+                    <input id="id_distanceMx" type="hidden" name="distanceMx" value="shit" />
+                    <button id="submitPlaceSelection" type="submit">Submit</button>
+                    <button id="clearPlaces" type="button">Clear</button>
+                </form>
+                <div id="searchedPlaces">
+                </div>
+            </div>
+            {% comment %} Everything map related goes here {% endcomment %}
+            <div id="map" class="col-lg-8"></div>
+            <div style="display: none">
+                <div id="info-content">
+                    <table>
+                        <tr id="iw-url-row" class="iw_table_row">
+                            <td id="iw-icon" class="iw_table_icon"></td>
+                            <td id="iw-url"></td>
+                        </tr>
+                        <tr id="iw-address-row" class="iw_table_row">
+                            <td class="iw_attribute_name">Address:</td>
+                            <td id="iw-address"></td>
+                        </tr>
+                        <tr id="iw-phone-row" class="iw_table_row">
+                            <td class="iw_attribute_name">Telephone:</td>
+                            <td id="iw-phone"></td>
+                        </tr>
+                        <tr id="iw-rating-row" class="iw_table_row">
+                            <td class="iw_attribute_name">Rating:</td>
+                            <td id="iw-rating"></td>
+                        </tr>
+                        <tr id="iw-website-row" class="iw_table_row">
+                            <td class="iw_attribute_name">Website:</td>
+                            <td id="iw-website"></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- end of row-->
+    </div>
+    <!-- end of wrapper-->
+    <script type="text/javascript" src="{% static 'js/jquery-3.2.1.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/js.cookie.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/bootstrap/tether/tether.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/bootstrap/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB62WXl60F8rx74hDmKjj_sBJRwu5Wgnlo&libraries=places"></script>
+    {% comment %}
+    <script type="text/javascript" src="{% static 'js/itineraryPicker.js' %}"></script>{% endcomment %}
+    <script>
+        var ferTestList = [];
+        var successURL = "{{success_url}}";
+        var distanceMatrix = [];
+        var mapInitialLocation = {
+            lat: 51.50770709999999,
+            lng: -0.12877930000001925
+        };
+        var map, placesService, infoWindow;
+        var markers = [];
+        var placesSelected = [];
+        // this list holds the complete google response after search (place object)
+        var googleSearchedPlaces = [];
+        var hostnameRegexp = new RegExp('^https?://.+?/');
+        //var service = new google.maps.DistanceMatrixService;
+        // debugger;
+        // var csrftoken = Cookies.get('csrftoken');
+        // initializing Map
+        map = new google.maps.Map(document.getElementById("map"), {
+            center: mapInitialLocation,
+            zoom: 15,
+            mapTypeId: "roadmap"
+        });
+        // init container for the place of interest information
+        infoWindow = new google.maps.InfoWindow({
+            content: document.getElementById('info-content'),
+            // TODO: Check why originally is misplaced.
+            pixelOffset: new google.maps.Size(-28, 0)
+        });
+        // init placesService instance 
+        placesService = new google.maps.places.PlacesService(map);
+        // Create the search box and link it to the UI element.
+        var input = document.getElementById("pac-input");
+        var searchBox = new google.maps.places.SearchBox(input);
+        map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+        // Bias the SearchBox results towards current map's viewport.
+        map.addListener("bounds_changed", function () {
+            searchBox.setBounds(map.getBounds());
+        });
+        // Listen for the event fired when the user selects a prediction and retrieve
+        // more details for that place.
+        searchBox.addListener("places_changed", function () {
+            var places = searchBox.getPlaces();
+            if (places.length == 0) {
+                return;
+            }
+            // For each place, get the icon, name and location.
+            var bounds = new google.maps.LatLngBounds();
+            places.forEach(function (place) {
+                console.log("places",place);
+                ferTestList.push(place);
+                if (!place.geometry) {
+                    console.log("Returned place contains no geometry");
+                    return;
+                }
+                googleSearchedPlaces.push("place_id:"+place.place_id);
+                placesSelected.push(place.geometry.location);
+                populateMarkers(place);
+                if (place.geometry.viewport) {
+                    // Only geocodes have viewport.
+                    bounds.union(place.geometry.viewport);
+                } else {
+                    bounds.extend(place.geometry.location);
+                }
+            });
+            map.fitBounds(bounds);
+        });
+        function callbackFunction(response, status) {
+
+            if (status !== 'OK') {
+                console.log('Error was: ' + status);
+            } else {
+                distanceMatrix = response.rows;
+                console.log("TheResponse:", response.rows);
+            }
+            console.log("YA ACABO CALLBACK");
+        };
+
+        function distanceMatrixCall() {
+            var computedDistances = [];
+            var gs = new google.maps.DistanceMatrixService;
+            gs.getDistanceMatrix({
+                //origins:googleSearchedPlaces,
+                //destinations: googleSearchedPlaces,
+                // Replace this lines if we want to go back to normal behaviour
+                origins: placesSelected,
+                destinations: placesSelected,
+                travelMode: 'WALKING',
+                unitSystem: google.maps.UnitSystem.METRIC,
+                avoidHighways: false,
+                avoidTolls: false
+            }, function (response, status) {
+                if (status !== 'OK') {
+                    console.log("Error was: " + status);
+                } else {
+                    console.log(response);
+                    computedDistances.push(response);
+                }
+                var toSubmitList = []
+                markers.map(function (marker) {
+                    return toSubmitList.push(make_json_marker(marker));
+                });
+                // Section in which we format the data with the distances
+                var rawDistanceMatrix = [];
+                for (var i = 0; i < computedDistances[0].originAddresses.length; i++) {
+                    var results = computedDistances[0].rows[i].elements;
+                    for (var j = 0; j < results.length; j++) {
+                        if (computedDistances[0].originAddresses[i] != computedDistances[0].destinationAddresses[j]) {
+                            console.log(computedDistances[0].originAddresses[i], " to: ", computedDistances[0].destinationAddresses[j]);
+                            console.log("in...", results[j].duration.text);
+                            var distanceMatrixObject = {};
+                            distanceMatrixObject['from'] = computedDistances[0].originAddresses[i];
+                            distanceMatrixObject['to'] = computedDistances[0].destinationAddresses[j];
+                            distanceMatrixObject['durationText'] = results[j].duration.text;
+                            distanceMatrixObject['durationSeconds'] = results[j].duration.value;
+                            rawDistanceMatrix.push(distanceMatrixObject);
+                        }
+                    }
+                }
+                // 
+                var toSubmitFormattedJson = JSON.stringify(rawDistanceMatrix);
+                // End of the section. TODO: Refactor it.
+                var toSubmitJsonList = JSON.stringify(toSubmitList);
+                var toSubmitJsonMatrix = JSON.stringify(computedDistances);
+                //console.log(toSubmitJsonMatrix);
+                $.ajax({
+                    type: "POST",
+                    url: successURL,
+                    data: { placesToVisit: toSubmitJsonList, distanceMatrix: toSubmitFormattedJson },
+                    success: function (json) {
+                        // What we receive from success on server side.
+                        console.log("success!");
+                        console.log(json);
+                    },
+                    error: function (json) {
+                        // in case of error we get this from server
+                        console.log("Was error");
+                    },
+                });
+            });
+        };
+
+        // Listener for the submit inside the sidebar list with selectedPlaces.
+        $('#submitPlaceSelection').on('click', function (e) {
+            e.preventDefault();
+            // pending to disable button to stop user submitting turbo madness
+            //console.log($(this));
+            // DistanceMatrixCall goes to external Google Service
+            // Therefore we wrap it up in a different function with
+            // its callback.
+            distanceMatrixCall()
+            var csrftoken = Cookies.get('csrftoken');
+            function csrfSafeMethod(method) {
+                // these HTTP methods do not require CSRF protection
+                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+            }
+            $.ajaxSetup({
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
+        });
+
+        // Listener for Clear button in case user wants to delete every marker from map
+        $('#clearPlaces').on('click', function (e) { clearOldMarkers(); });
+
+        function make_json_marker(marker) {
+            var $marker_obj = {
+                "place_id": marker.placeResult.place_id,
+                "is_hotel": false,
+                "name": marker.placeResult.name,
+                "lat": marker.position.lat(),
+                "lng": marker.position.lng()
+            }
+            console.log($marker_obj);
+            //return JSON.stringify($marker_obj, null, 4);
+            return $marker_obj
+        }
+
+        function addPlaceToList(googlePlace) {
+            placesSelected.push(googlePlace);
+            // addSelectedPlaceToSidebar(googlePlace);
+        }
+
+        function addSelectedPlaceToSidebar(googlePlaceMarker) {
+            // if the place already exists in our list ignore
+            var searchedPlaces = document.getElementById('searchedPlaces');
+            if (!searchedPlaces.children.length) {
+                var ul = document.createElement('ul');
+                ul.className = 'list-group';
+            }
+            else {
+                var ul = searchedPlaces.children[0];
+            }
+            var name = document.createTextNode(googlePlaceMarker.title);
+            var li = document.createElement('li');
+            li.className = 'list-group-item';
+            li.appendChild(name);
+            // inserting click event to display on map
+            // var marker = new google.maps.Marker({
+            //     position: { 
+            //         lat: googlePlace.geometry.location.lat(), 
+            //         lng: googlePlace.geometry.location.lng() 
+            //     }
+            // });
+            // marker.placeResult = googlePlace;
+            // google.maps.event.addListener(marker, "click", showInfoWindow);
+            // setTimeout(dropMarker(marker))
+
+            li.addEventListener('click', function () {
+                google.maps.event.trigger(googlePlaceMarker, 'click');
+                console.log("clicked");
+            }, false);
+
+            // li.onclick = function() {
+            //   google.maps.event.trigger(marker, "click");
+            // };
+            ul.appendChild(li);
+            searchedPlaces.appendChild(ul);
+        }
+
+        // Get the place details for a hotel. Show the information in an info window,
+        // anchored on the marker for the hotel that the user selected.
+        function showInfoWindow() {
+            var marker = this;
+            placesService.getDetails({ placeId: marker.placeResult.place_id },
+                function (place, status) {
+                    if (status !== google.maps.places.PlacesServiceStatus.OK) {
+                        return;
+                    }
+                    infoWindow.open(map, marker);
+                    buildIWContent(place);
+                });
+        }
+
+
+        // Load the place information into the HTML elements used by the info window.
+        function buildIWContent(place) {
+            document.getElementById("iw-icon").innerHTML =
+                '<img class="hotelIcon" ' + 'src="' + place.icon + '"/>';
+            document.getElementById("iw-url").innerHTML =
+                '<b><a href="' + place.url + '">' + place.name + "</a></b>";
+            document.getElementById("iw-address").textContent = place.vicinity;
+
+            if (place.formatted_phone_number) {
+                document.getElementById("iw-phone-row").style.display = "";
+                document.getElementById("iw-phone").textContent =
+                    place.formatted_phone_number;
+            } else {
+                document.getElementById("iw-phone-row").style.display = "none";
+            }
+
+            // Assign a five-star rating to the hotel, using a black star ('&#10029;')
+            // to indicate the rating the hotel has earned, and a white star ('&#10025;')
+            // for the rating points not achieved.
+            if (place.rating) {
+                var ratingHtml = "";
+                for (var i = 0; i < 5; i++) {
+                    if (place.rating < i + 0.5) {
+                        ratingHtml += "&#10025;";
+                    } else {
+                        ratingHtml += "&#10029;";
+                    }
+                    document.getElementById("iw-rating-row").style.display = "";
+                    document.getElementById("iw-rating").innerHTML = ratingHtml;
+                }
+            } else {
+                document.getElementById("iw-rating-row").style.display = "none";
+            }
+
+            // The regexp isolates the first part of the URL (domain plus subdomain)
+            // to give a short URL for displaying in the info window.
+            if (place.website) {
+                var fullUrl = place.website;
+                var website = hostnameRegexp.exec(place.website);
+                if (website === null) {
+                    website = "http://" + place.website + "/";
+                    fullUrl = website;
+                }
+                document.getElementById("iw-website-row").style.display = "";
+                document.getElementById("iw-website").textContent = website;
+            } else {
+                document.getElementById("iw-website-row").style.display = "none";
+            }
+        }
+
+        function populateMarkers(place) {
+            //Each found place need an icon.
+            var icon = {
+                url: place.icon,
+                size: new google.maps.Size(80, 80),
+                origin: new google.maps.Point(0, 0),
+                anchor: new google.maps.Point(17, 34),
+                scaledSize: new google.maps.Size(25, 25)
+            };
+            // Create marker from place
+            var googlePlaceMarker = new google.maps.Marker({
+                map: map,
+                icon: icon,
+                title: place.name,
+                position: place.geometry.location,
+                animation: google.maps.Animation.DROP,
+            });
+            // Fill the marker to the global Dict
+            googlePlaceMarker.placeResult = place;
+            google.maps.event.addListener(googlePlaceMarker, "click", showInfoWindow);
+            markers.push(googlePlaceMarker);
+            var json_markers = markers.map(function (place) {
+                //return jsonifyPlace(place);
+                return make_json_marker(place);
+            });
+            //console.log(json_markers);
+            //$('#id_placesToVisit').val(json_markers);
+            //addPlaceToList(place);
+            addSelectedPlaceToSidebar(googlePlaceMarker);
+        }
+
+        // Helper function to remove all the markers from the map.
+        function clearOldMarkers() {
+            // Clear out the old markers.
+            markers.forEach(function (marker) {
+                marker.setMap(null);
+            });
+            markers = [];
+            placesSelected = [];
+            googleSearchedPlaces = [];
+            $('#id_placesToVisit').val('');
+            $('#id_distanceMx').val('');
+            $('#searchedPlaces ul').empty();
+
+        }
+    </script>
+</body>
+
+</html>

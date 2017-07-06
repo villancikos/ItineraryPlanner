@@ -1,0 +1,67 @@
+{
+  "distanceMatrix": [
+    {
+      "from": "origin",
+      "to": "destination",
+      "mode": "walking",
+      "time": 3000
+    },
+    {
+      "from": "origin",
+      "to": "destination",
+      "mode": "walking",
+      "time": 3000
+    }
+  ],
+  "placesResult": [
+    {
+      "place_id": "ChIJrQCmO9IEdkgRyoqlpJ3K8n8",
+      "is_hotel": false,
+      "name": "LEGO® Store Leicester Square",
+      "lat": 51.51042579999999,
+      "lng": -0.1309333000000379
+    },
+    {
+      "place_id": "ChIJlzV3vysFdkgRo0fQHE0mBRk",
+      "is_hotel": false,
+      "name": "Leica Store Mayfair",
+      "lat": 51.5108555,
+      "lng": -0.14509050000003754
+    },
+    {
+      "place_id": "ChIJe-izdaMedkgR1ufgPeHiwyU",
+      "is_hotel": false,
+      "name": "Queen Street",
+      "lat": 51.6072219,
+      "lng": -0.07536379999999099
+    },
+    {
+      "place_id": "ChIJj3swFNIEdkgRi3YRrdJH0ao",
+      "is_hotel": false,
+      "name": "Leicester Square",
+      "lat": 51.5109213,
+      "lng": -0.12988129999996545
+    },
+    {
+      "place_id": "ChIJNzSMIjwbdkgRe9Lb_yr2Szo",
+      "is_hotel": false,
+      "name": "The Harry Potter Shop",
+      "lat": 51.53209400000001,
+      "lng": -0.12398389999998471
+    },
+    {
+      "place_id": "ChIJCzRoADwbdkgRwTjXrQjiHbE",
+      "is_hotel": false,
+      "name": "King's Cross",
+      "lat": 51.53079229999999,
+      "lng": -0.12352069999997184
+    },
+    {
+      "place_id": "ChIJ3TgfM0kDdkgRZ2TV4d1Jv6g",
+      "is_hotel": false,
+      "name": "Tower of London",
+      "lat": 51.50811239999999,
+      "lng": -0.07594930000004751
+    }
+  ]
+}

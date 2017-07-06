@@ -1,0 +1,40 @@
+TODOS FOR THE APP BEFORE SUBMITING:
+
+- If user search for the same Place_ID don't allow to add it.
+- Control when user does not click on one of the suggested places to avoid 
+ the app to search for all the related ones. like the Pizza use case...
+- Search boundaries LONDON
+- I made the change to compute distances using Place_ID and didn't work.
+However, the submit was successfull and it shouldn't.
+- I found out an example that draws the path!
+https://developers.google.com/maps/documentation/javascript/examples/places-autocomplete-directions
+
+question that suggests using the Place_id: preffix to get it correctly.
+https://stackoverflow.com/questions/31172642/finding-distance-using-place-id
+
+Useful SO question about the precision of the lat and lng
+https://gis.stackexchange.com/questions/8650/measuring-accuracy-of-latitude-and-longitude
+
+
+CODE:
+var directionsService = new google.maps.DirectionsService;
+var directionsDisplay = new google.maps.DirectionsRenderer;
+directionsDisplay.setMap(map);
+directionsDisplay.setOptions({markerOptions:'bla'})
+
+function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+        directionsService.route({
+          origin: markers[1].placeResult.geometry.location,
+          destination: markers[2].placeResult.geometry.location,
+          travelMode: 'DRIVING'
+        }, function(response, status) {
+          if (status === 'OK') {
+            directionsDisplay.setDirections(response);
+          } else {
+            window.alert('Directions request failed due to ' + status);
+          }
+        });
+      }
+
+
+calculateAndDisplayRoute(directionsService,directionsDisplay);

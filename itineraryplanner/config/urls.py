@@ -15,14 +15,11 @@ urlpatterns = [
     # User management
     url(r'^users/', include('itineraryplanner.users.urls', namespace='users')),
     url(r'^accounts/', include('allauth.urls')),
-
-    # url(r'^autocomplete/$', 
-    #     TemplateView.as_view(template_name='pages/autocomplete.html'), 
-    #     name='autocomplete'),
     # URls for Google Examples App
     url(r'^googleExamples/',
         include('itineraryplanner.google_examples.urls', namespace='google-examples')),
-
+    url(r'^itineraryPlanner/',
+        include('itineraryplanner.itineraries.urls', namespace='itineraries')),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
