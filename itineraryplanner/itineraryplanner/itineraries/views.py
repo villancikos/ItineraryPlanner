@@ -68,13 +68,14 @@ class PlacesOfInterestView(FormView):
         distanceMatrixObject = json.loads(distanceMatrixJson)
 
         for place in placesToVisitObject:
-            print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}".format(
-                place['place_id'],
-                place['is_hotel'],
-                place['name'],
-                place['lat'],
-                place['lng']
-            ))
+            # To DEBUG remove comments
+            # print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}".format(
+            #     place['place_id'],
+            #     place['is_hotel'],
+            #     place['name'],
+            #     place['lat'],
+            #     place['lng']
+            # ))
 
             # we first try update the place in case it exists.
             # otherwise we just create it and carry on with the
@@ -88,12 +89,13 @@ class PlacesOfInterestView(FormView):
                     "lng": place['lng']
                 }
             )
-            if created:
-                print("'{}' was created successfully".format(obj.name))
-            else:
-                print("'{0}' was already in the database with id={1}".format(
-                    obj.name, obj.place_id))
-            print(obj, ", was created?: ", created)
+            # To DEBUG remove comments
+            # if created:
+            #     print("'{}' was created successfully".format(obj.name))
+            # else:
+            #     print("'{0}' was already in the database with id={1}".format(
+            #         obj.name, obj.place_id))
+            # print(obj, ", was created?: ", created)
         
         # import pdb
         # pdb.set_trace()
@@ -124,8 +126,9 @@ class PlacesOfInterestView(FormView):
                     duration = dmx['rows'][0]['elements'][0]['duration']['value']
                     it_step.duration = duration
                     it_step.save()
-                else:
-                    print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
+                # To DEBUG remove comments
+                # else:
+                #     print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
         # one liner to print steps just to verify
         [print(step) for step in itinerary.steps.all()]
         # TODO, create JSON response for the steps.
