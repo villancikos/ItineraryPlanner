@@ -38,3 +38,18 @@ function calculateAndDisplayRoute(directionsService, directionsDisplay) {
 
 
 calculateAndDisplayRoute(directionsService,directionsDisplay);
+
+Get the subprocess and do console stuff
+https://www.lifewire.com/g00/write-awk-commands-and-scripts-2200573?i10c.referrer=https%3A%2F%2Fwww.google.nl%2F
+https://stackoverflow.com/questions/4760215/running-shell-command-from-python-and-capturing-the-output
+https://askubuntu.com/questions/420981/how-do-i-save-terminal-output-to-a-file
+https://stackoverflow.com/questions/19059294/catching-terminal-output-in-python
+http://www.guru99.com/reading-and-writing-files-in-python.html
+https://stackoverflow.com/questions/44573389/generating-commands-on-terminal-from-django-after-user-submits-data-on-webpage
+
+
+
+
+Constraints in planning:
+http://www.cs.yale.edu/homes/dvm/papers/pddl-ipc5.pdf
+
