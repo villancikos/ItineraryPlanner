@@ -10,6 +10,7 @@ from django.utils.translation import ugettext_lazy as _
 from model_utils import Choices
 from model_utils.models import TimeStampedModel
 
+from ..utils.helpers import unique_slugify
 
 """
 ######################################################
@@ -56,10 +57,28 @@ class PlaceOfInterest(TimeStampedModel):
         max_digits=13,
         decimal_places=10
     )
-
+    slug = models.SlugField(
+        _('slug'),
+        max_length=255,
+        unique=True
+    )
+    opens = models.CharField(
+        max_length=4,
+        blank=True,
+    )
+    closes = models.CharField(
+        max_length=4,
+        blank=True,
+    )
     # Meta and String
     def __str__(self):
         return '{0}'.format(self.name)
+
+    def save(self, *args, **kwargs):
+        # Generate a slug for a new model instance before saving it.
+        if self.pk is None:
+            unique_slugify(self, self.name)
+        super(PlaceOfInterest, self).save(*args, **kwargs)
 
 
 class Itinerary(TimeStampedModel):
@@ -88,7 +107,17 @@ class Itinerary(TimeStampedModel):
         default=uuid.uuid4,
         editable=False
     )
-
+    def get_itinerary_places(self):
+        """ this method will return 
+        all the places that the user wants to visit
+        in a whole itinerary plan."""
+        places = []
+        last_place = None
+        for step in self.steps.all():
+            if not last_place == step.origin:
+                last_place = step.origin
+                places.append(step.origin.slug)
+        return places
 
 class ItineraryStep(TimeStampedModel):
     """
@@ -130,6 +159,10 @@ class ItineraryStep(TimeStampedModel):
         default=0,
     )
 
+    def get_travel_method(self):
+        """ helper function to return travel method in readable format"""
+        return self.METHOD_CHOICES[self.method]
+
     # Meta and String
     class Meta:
         verbose_name = _("Itinerary Step")
@@ -137,5 +170,5 @@ class ItineraryStep(TimeStampedModel):
         ordering = ["index", "created"]
 
     def __str__(self):
-        return 'Itinerary step from {0} to {1}. Duration:{2}'.format(
-            self.origin, self.destination, self.duration)
+        return 'Itinerary step from {0} to {1}. Method: {2}. Duration:{3}'.format(
+            self.origin, self.destination, self.METHOD_CHOICES[self.method], self.duration)
