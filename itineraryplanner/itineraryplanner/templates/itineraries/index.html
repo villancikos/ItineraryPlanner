@@ -62,6 +62,7 @@
     <!-- end of wrapper-->
     <script type="text/javascript" src="{% static 'js/jquery-3.2.1.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/js.cookie.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/moment.js' %}"></script>    
     <script type="text/javascript" src="{% static 'js/bootstrap/tether/tether.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap/bootstrap.min.js' %}"></script>
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB62WXl60F8rx74hDmKjj_sBJRwu5Wgnlo&libraries=places"></script>
@@ -142,7 +143,6 @@
                 distanceMatrix = response.rows;
                 console.log("TheResponse:", response.rows);
             }
-            console.log("YA ACABO CALLBACK");
         };
 
         function distanceMatrixCall() {
@@ -170,24 +170,24 @@
                     return toSubmitList.push(make_json_marker(marker));
                 });
                 // Section in which we format the data with the distances
-                var rawDistanceMatrix = [];
-                for (var i = 0; i < computedDistances[0].originAddresses.length; i++) {
-                    var results = computedDistances[0].rows[i].elements;
-                    for (var j = 0; j < results.length; j++) {
-                        if (computedDistances[0].originAddresses[i] != computedDistances[0].destinationAddresses[j]) {
-                            console.log(computedDistances[0].originAddresses[i], " to: ", computedDistances[0].destinationAddresses[j]);
-                            console.log("in...", results[j].duration.text);
-                            var distanceMatrixObject = {};
-                            distanceMatrixObject['from'] = computedDistances[0].originAddresses[i];
-                            distanceMatrixObject['to'] = computedDistances[0].destinationAddresses[j];
-                            distanceMatrixObject['durationText'] = results[j].duration.text;
-                            distanceMatrixObject['durationSeconds'] = results[j].duration.value;
-                            rawDistanceMatrix.push(distanceMatrixObject);
-                        }
-                    }
-                }
+                //var rawDistanceMatrix = [];
+                //for (var i = 0; i < computedDistances[0].originAddresses.length; i++) {
+                //    var results = computedDistances[0].rows[i].elements;
+                //    for (var j = 0; j < results.length; j++) {
+                //        if (computedDistances[0].originAddresses[i] != computedDistances[0].destinationAddresses[j]) {
+                //            console.log(computedDistances[0].originAddresses[i], " to: ", computedDistances[0].destinationAddresses[j]);
+                //            console.log("in...", results[j].duration.text);
+                //            var distanceMatrixObject = {};
+                //            distanceMatrixObject['from'] = computedDistances[0].originAddresses[i];
+                //            distanceMatrixObject['to'] = computedDistances[0].destinationAddresses[j];
+                //            distanceMatrixObject['durationText'] = results[j].duration.text;
+                //            distanceMatrixObject['durationSeconds'] = results[j].duration.value;
+                //            rawDistanceMatrix.push(distanceMatrixObject);
+                //        }
+                //    }
+                //}
                 // 
-                var toSubmitFormattedJson = JSON.stringify(rawDistanceMatrix);
+                //var toSubmitFormattedJson = JSON.stringify(rawDistanceMatrix);
                 // End of the section. TODO: Refactor it.
                 var toSubmitJsonList = JSON.stringify(toSubmitList);
                 var toSubmitJsonMatrix = JSON.stringify(computedDistances);
@@ -195,7 +195,7 @@
                 $.ajax({
                     type: "POST",
                     url: successURL,
-                    data: { placesToVisit: toSubmitJsonList, distanceMatrix: toSubmitFormattedJson },
+                    data: { placesToVisit: toSubmitJsonList },
                     success: function (json) {
                         // What we receive from success on server side.
                         console.log("success!");
@@ -235,13 +235,23 @@
         // Listener for Clear button in case user wants to delete every marker from map
         $('#clearPlaces').on('click', function (e) { clearOldMarkers(); });
 
+        
         function make_json_marker(marker) {
-            var $marker_obj = {
+            let has_opening_hours = marker.placeResult.hasOwnProperty('opening_hours');
+            let today = moment().format('d');
+            let opens = has_opening_hours ? marker.placeResult.opening_hours.periods[today].open.time : 'null';
+            let closes = has_opening_hours ? marker.placeResult.opening_hours.periods[today].close.time : 'null';
+            console.log(marker.placeResult.name," opens at: ", opens);
+            console.log(marker.placeResult.name," closes at: ", closes);
+
+            let $marker_obj = {
                 "place_id": marker.placeResult.place_id,
                 "is_hotel": false,
                 "name": marker.placeResult.name,
                 "lat": marker.position.lat(),
-                "lng": marker.position.lng()
+                "lng": marker.position.lng(),
+                "opens" : opens,
+                "closes": closes
             }
             console.log($marker_obj);
             //return JSON.stringify($marker_obj, null, 4);

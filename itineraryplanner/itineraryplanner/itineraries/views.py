@@ -64,19 +64,21 @@ class PlacesOfInterestView(FormView):
 
         placesToVisitJson = form.cleaned_data['placesToVisit']
         placesToVisitObject = json.loads(placesToVisitJson)
-        distanceMatrixJson = form.cleaned_data['distanceMatrix']
-        distanceMatrixObject = json.loads(distanceMatrixJson)
+        #distanceMatrixJson = form.cleaned_data['distanceMatrix']
+        #distanceMatrixObject = json.loads(distanceMatrixJson)
 
         for place in placesToVisitObject:
             # To DEBUG remove comments
-            # print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}".format(
-            #     place['place_id'],
-            #     place['is_hotel'],
-            #     place['name'],
-            #     place['lat'],
-            #     place['lng']
-            # ))
-
+            print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}.\
+            \n Opens at:{5} and Closes at:{6}  ".format(
+                place['place_id'],
+                place['is_hotel'],
+                place['name'],
+                place['lat'],
+                place['lng'],
+                place['opens'],
+                place['closes']
+            ))
             # we first try update the place in case it exists.
             # otherwise we just create it and carry on with the
             # relations with other Models in the database
@@ -131,6 +133,14 @@ class PlacesOfInterestView(FormView):
                 #     print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
         # one liner to print steps just to verify
         [print(step) for step in itinerary.steps.all()]
+
+        # NEXT STEPS:::::::::::::::::::::::::::::
+        # CREATE PDDL PROBLEM FILE
+        # RUN PROBLEM FILE ON A SUBPROCESS
+        # PARSE RESULT FROM THE TERMINAL 
+        # UPDATE THE INDEX ACCORDING TO THE VISIT TIMES
+        # THINK ABOUT WHAT TO DO WITH THE TIME TO SPEND IN EACH LOCATION
+        
         # TODO, create JSON response for the steps.
         if self.request.is_ajax():
             # Request is ajax, send a json response
