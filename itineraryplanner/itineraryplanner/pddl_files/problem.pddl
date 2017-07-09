@@ -2,7 +2,7 @@
 	(:domain touristinfo)
 	(:objects ldneye stp trafalgsq hotel - location tourist1 - tourist bus walk - mode)
 	(:init 
-			(at 600 (open stp))
+			(at 0600 (open stp))
 			(at 1200 (not (open stp)))
 	       	(at 0 (open ldneye))
 	       	(at 1000 (not (open ldneye)))
