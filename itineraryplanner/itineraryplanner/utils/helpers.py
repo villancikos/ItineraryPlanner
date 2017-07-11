@@ -4,6 +4,7 @@ import calendar
 import datetime
 import itertools
 import os
+from random import randrange
 import re
 import uuid
 from django.template.defaultfilters import slugify
@@ -76,13 +77,52 @@ def unique_slugify(instance, value, slug_field_name='slug', queryset=None,
 
 def create_pddl_problem(itinerary):
     places = itinerary.get_itinerary_places()
+    steps = itinerary.steps.all()
+    travel_methods = itinerary.get_all_travel_methods()
     print("............creating objects....")
-    line = "(define (problem {})\n\
+    header = "(define (problem {})\n\
         (:domain touristinfo)".format(itinerary.slug)
-    line2 = "\n\t(:objects "
+    objects = "\n\t(:objects hotel"
+    init = "\t(:init \n"
+    times = ""
+    tourist_location = "\t\t(at tourist1 {0})\n".format("hotel") #TODO: real data
+    paths = ""
+    traveltimes = ""
+    visit_for = ""
+    goals = "\t(:goal\n\t\t(and\n\t\t\t(at tourist1 hotel)\n"
+    constraints = "\t(:constraints"
+    metrics = "\t(:metric minimize\n\t\t(+\n\t\t\t(total-time)\n\t\t\t(* {}\
+    \n\t\t\t\t(+\n".format(1000)
+    for step in steps:
+        # first we get the paths
+        #if step.origin.slug != place:
+        origin = step.origin.slug
+        destination = step.destination.slug
+        method = step.get_travel_method()
+        camelCase = step.origin.get_camelCase()
+        # we need the duration in minutes rounded
+        duration = round(step.duration/60,2)
+        paths += "\t\t(path {0} {1})\n".format(origin, destination)
+        # afterwards we need to get the traveltimes per traveling method
+        # for travel_method in travel_methods:
+        traveltimes += "\t\t(=(traveltime {0} {1} {2}){3})\n".format(method, origin, destination,duration)
+        traveltimes += "\t\t(=(traveltime {0} {1} {2}){3})\n".format(method, "hotel", destination,randrange(5,45))
+        traveltimes += "\t\t(=(traveltime {0} {1} {2}){3})\n".format(method, origin, "hotel",randrange(5,45))
+        # then we get the opening and closing times if they exist. otherwise none
+        if step.origin.opens != "":
+            times +="\t\t(at {0} (open {1}))\n".format(step.origin.opens, step.origin.slug)
+            times +="\t\t(at {0} (not (open {1})))\n".format(step.origin.closes, step.origin.slug)    
+        # getting the duration of the visits.
+        visit_for += "\t\t(=(visitfor {0} tourist1){1})\n".format(origin,30)
+        # getting the goals
+        goals += "\t\t\t(preference {0} (at end (visited tourist1 {1})))\n".format(camelCase,origin)
+        metrics += "\t\t\t\t\t(is-violated {})\n".format(camelCase)
+    visit_for+="\t)\n" # ending of visit_for
+    goals+="\t\t)\n\t)\n" # ending of goals
+    metrics+="\t\t\t\t)\n\t\t\t)\n\t\t)\n\t)\n)"
     for place in places:
-        line2 + place
-        print(place)
-    line2 + " - location"
-    print(line,line2)
-     
+        objects+="{} ".format(place)
+        paths += "\t\t(path {0} {1})\n".format("hotel", place)
+        paths += "\t\t(path {0} {1})\n".format(place, "hotel")
+    objects+=" - location tourist1 - tourist bus walk - mode)\n"    
+    print(header,objects,init,times,tourist_location,times,paths,traveltimes,visit_for,goals,constraints)

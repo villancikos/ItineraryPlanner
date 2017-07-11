@@ -79,6 +79,9 @@ class PlaceOfInterest(TimeStampedModel):
         if self.pk is None:
             unique_slugify(self, self.name)
         super(PlaceOfInterest, self).save(*args, **kwargs)
+  
+    def get_camelCase(self):
+        return "Visit"+''.join(x.capitalize() or '-' for x in self.slug.split('-'))
 
 
 class Itinerary(TimeStampedModel):
@@ -107,6 +110,16 @@ class Itinerary(TimeStampedModel):
         default=uuid.uuid4,
         editable=False
     )
+    initialPOI = models.ForeignKey(
+        PlaceOfInterest,
+        null=False,
+        related_name="starting_point_for_itinerary",
+    )
+    endingPOI = models.ForeignKey(
+        PlaceOfInterest,
+        null=True,
+        related_name="ending_point_for_itinerary"
+    )
     def get_itinerary_places(self):
         """ this method will return 
         all the places that the user wants to visit
@@ -118,6 +131,18 @@ class Itinerary(TimeStampedModel):
                 last_place = step.origin
                 places.append(step.origin.slug)
         return places
+
+
+    def get_all_travel_methods(self):
+        """ small helper to get all travel methods 
+        available inside an itinerary """
+        steps = self.steps.all()
+        methods = []
+        for step in steps:
+            if step.get_travel_method() not in methods:
+                methods.append(step.get_travel_method())
+        return methods
+
 
 class ItineraryStep(TimeStampedModel):
     """
@@ -162,7 +187,7 @@ class ItineraryStep(TimeStampedModel):
     def get_travel_method(self):
         """ helper function to return travel method in readable format"""
         return self.METHOD_CHOICES[self.method]
-
+        
     # Meta and String
     class Meta:
         verbose_name = _("Itinerary Step")
@@ -172,3 +197,36 @@ class ItineraryStep(TimeStampedModel):
     def __str__(self):
         return 'Itinerary step from {0} to {1}. Method: {2}. Duration:{3}'.format(
             self.origin, self.destination, self.METHOD_CHOICES[self.method], self.duration)
+
+
+class Preferences(TimeStampedModel):
+    """ Each user will have many preferences 
+    for each itinerary. """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+    itinerary = models.ForeignKey(
+        Itinerary,
+        on_delete=models.CASCADE,
+        related_name="itinerary_preference",
+        verbose_name=_("itinerary preferences"),
+    )
+    place = models.ForeignKey(
+        PlaceOfInterest,
+        related_name="place_preference",
+        verbose_name="place to visit preference",
+        null=False,
+    )
+    visitFor = models.PositiveIntegerField(
+        default=30,
+        blank=False,
+    )
+
+    class Meta:
+        verbose_name = _("Itinerary Preference")
+        verbose_name_plural= _("Itinerary Preferences")
+
+    def __str__(self):
+        return 'Visit {0} for {1}mins on Itinerary:{2}'.format(self.place,self.visitFor, self.itinerary.slug)

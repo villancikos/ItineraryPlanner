@@ -190,7 +190,7 @@
                 //var toSubmitFormattedJson = JSON.stringify(rawDistanceMatrix);
                 // End of the section. TODO: Refactor it.
                 var toSubmitJsonList = JSON.stringify(toSubmitList);
-                var toSubmitJsonMatrix = JSON.stringify(computedDistances);
+                //var toSubmitJsonMatrix = JSON.stringify(computedDistances);
                 //console.log(toSubmitJsonMatrix);
                 $.ajax({
                     type: "POST",
@@ -239,8 +239,19 @@
         function make_json_marker(marker) {
             let has_opening_hours = marker.placeResult.hasOwnProperty('opening_hours');
             let today = moment().format('d');
-            let opens = has_opening_hours ? marker.placeResult.opening_hours.periods[today].open.time : 'null';
-            let closes = has_opening_hours ? marker.placeResult.opening_hours.periods[today].close.time : 'null';
+            let opens = 'null';
+            let closes = 'null';
+            if (has_opening_hours){
+                try {
+                    opens =  marker.placeResult.opening_hours.periods[today].open.time;
+                    marker.placeResult.opening_hours.periods[today].close.time
+                }
+                catch (e){
+                    console.log("Following Error occurred:", e);
+                }
+            }
+            //let opens = has_opening_hours ? marker.placeResult.opening_hours.periods[today].open.time : 'null';
+            //let closes = has_opening_hours ? marker.placeResult.opening_hours.periods[today].close.time : 'null';
             console.log(marker.placeResult.name," opens at: ", opens);
             console.log(marker.placeResult.name," closes at: ", closes);
 
@@ -386,10 +397,10 @@
             googlePlaceMarker.placeResult = place;
             google.maps.event.addListener(googlePlaceMarker, "click", showInfoWindow);
             markers.push(googlePlaceMarker);
-            var json_markers = markers.map(function (place) {
-                //return jsonifyPlace(place);
-                return make_json_marker(place);
-            });
+            //var json_markers = markers.map(function (place) {
+            //    //return jsonifyPlace(place);
+            //    return make_json_marker(place);
+            //});
             //console.log(json_markers);
             //$('#id_placesToVisit').val(json_markers);
             //addPlaceToList(place);

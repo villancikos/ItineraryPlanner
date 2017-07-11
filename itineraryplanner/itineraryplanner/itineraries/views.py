@@ -7,13 +7,13 @@ server to compute the desired TOUR.
 """
 import json
 import googlemaps
-
+from random import randrange
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.http import HttpResponse
 from django.views.generic.edit import FormView
 
 from .forms import PlacesOfInterestForm
-from .models import PlaceOfInterest, ItineraryStep, Itinerary
+from .models import PlaceOfInterest, ItineraryStep, Itinerary, Preferences
 gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
 
 class PlacesOfInterestView(FormView):
@@ -66,7 +66,7 @@ class PlacesOfInterestView(FormView):
         placesToVisitObject = json.loads(placesToVisitJson)
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
-
+        created_places = []
         for place in placesToVisitObject:
             # To DEBUG remove comments
             print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}.\
@@ -91,6 +91,8 @@ class PlacesOfInterestView(FormView):
                     "lng": place['lng']
                 }
             )
+            #TODO:not the most elegant solution for the preference problem
+            created_places.append(obj)
             # To DEBUG remove comments
             # if created:
             #     print("'{}' was created successfully".format(obj.name))
@@ -98,12 +100,21 @@ class PlacesOfInterestView(FormView):
             #     print("'{0}' was already in the database with id={1}".format(
             #         obj.name, obj.place_id))
             # print(obj, ", was created?: ", created)
-        
-        # import pdb
-        # pdb.set_trace()
-        # Placeholder Itinerary. TODO
         # Create an Itinerary Object to hold the tour.
-        itinerary = Itinerary.objects.create()
+        itinerary = Itinerary()
+        #TODO: Remove this default initial place of interest.
+        # in the near future we want the user to selet his desired starting point
+        # i.e. the HOTEL kind of...
+        l = len(created_places)
+        random_POI = created_places[randrange(0,l)]
+        itinerary.initialPOI = random_POI
+        itinerary.save()
+        for place in created_places:
+            Prefeerences.objects.create(
+                itinerary = itinerary,
+                place = place,
+                visitFor = randrange(15,120)
+            )
         # Traverse all the possible origins
         for origin in placesToVisitObject:
             # Traverse all the possible destinations
@@ -128,9 +139,12 @@ class PlacesOfInterestView(FormView):
                     duration = dmx['rows'][0]['elements'][0]['duration']['value']
                     it_step.duration = duration
                     it_step.save()
+        
                 # To DEBUG remove comments
                 # else:
                 #     print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
+
+
         # one liner to print steps just to verify
         [print(step) for step in itinerary.steps.all()]
 
