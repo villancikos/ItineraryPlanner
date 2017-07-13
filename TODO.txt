@@ -53,3 +53,43 @@ https://stackoverflow.com/questions/44573389/generating-commands-on-terminal-fro
 Constraints in planning:
 http://www.cs.yale.edu/homes/dvm/papers/pddl-ipc5.pdf
 
+
+NOTES AMANDA
+add at 900 in the morning and then delete it at 
+time initial LITERAL
+conditional to every action
+los time literals es lo de AT open at not open .... ojo
+awake person , not awake person.
+o back to the hotel at this time 
+is "not-bed-time"...
+also a preference.
+-Like TFL PLANNER NO WALK MORE THAN xxx
+- DISABLE ACCESS
+ how the planner scales
+ experiments i did
+ ideas for the module
+ user chabge the plan to spend more time
+ interesting question replan and reuse the plan
+ replaning instead of creating the plan from scratch
+ intro why project is good, how many users come to london etc.
+ planners 
+ makesure papers on planners why use those planners, etc
+
+THESE ARE THE SECTIONS (need to ask for more):
+###literature review
+###specification and design...
+some technical reason why python was good not onlt one reason!!! a lot
+
+diagrams of the system.
+
+also ask amanda about all the SECTIONS
+say about testing.. .how I did it ...
+###evaluation ...
+scalability of the planner 
+features that im uuuuuuuuuuuuuuuuuuuuuuuuuuu
+###conclusions
+abstraction inside pddl with google maps.
+showcase ability of the planner. for people not used to it.
+future work
+
+##future scalable rewards tate modern 1 hour instead of 2 because is better for the overall plan.
