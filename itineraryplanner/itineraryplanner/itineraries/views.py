@@ -110,7 +110,7 @@ class PlacesOfInterestView(FormView):
         itinerary.initialPOI = random_POI
         itinerary.save()
         for place in created_places:
-            Prefeerences.objects.create(
+            Preferences.objects.create(
                 itinerary = itinerary,
                 place = place,
                 visitFor = randrange(15,120)

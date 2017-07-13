@@ -200,8 +200,10 @@ class ItineraryStep(TimeStampedModel):
 
 
 class Preferences(TimeStampedModel):
-    """ Each user will have many preferences 
-    for each itinerary. """
+    """
+    Each user will have many preferences
+    for each itinerary.
+    """
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -222,6 +224,9 @@ class Preferences(TimeStampedModel):
     visitFor = models.PositiveIntegerField(
         default=30,
         blank=False,
+    )
+    must_visit = models.BooleanField(
+        default=True,
     )
 
     class Meta:
