@@ -57,11 +57,15 @@
 			(at tourist1 hotel)
 			(preference VisitStp (visited tourist1 stp))
 			(preference VisitLdneye (visited tourist1 ldneye))
-			(preference VisitTrafalgsq (visited tourist1 trafalgsq)))
+			(preference VisitTrafalgsq (visited tourist1 trafalgsq))
+		)
 	)
 	;;;;;;;;;;;; Problem CONSTRAINTS ;;;;;;;;;;;;
 	(:constraints 
 	;; could use always, sometime, at-most-once, at end
+	;; within to express deadlines (sometime-before, sometime-after
+	;; always-within)
+	;; we also have syntatic sugar hold-during and hold-after
 		(and 
 			(preference VisitStp (at end (visited tourist1 stp))) 
 			(preference VisitLdneye (at end (visited tourist1 ldneye))) 

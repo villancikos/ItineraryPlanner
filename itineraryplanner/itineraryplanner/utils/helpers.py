@@ -10,8 +10,6 @@ import uuid
 from django.template.defaultfilters import slugify
 
 
-
-
 def _slug_strip(value, separator=None):
     """
     Cleans up a slug by removing slug separator characters that occur at the
@@ -76,53 +74,80 @@ def unique_slugify(instance, value, slug_field_name='slug', queryset=None,
 
 
 def create_pddl_problem(itinerary):
+    tabs = {
+        1: '\t',
+        2: '\t\t',
+        3: '\t\t\t',
+        4: '\t\t\t\t',
+        5: '\t\t\t\t\t',
+    }
+    initial_location = itinerary.initialPOI
+    ending_location = itinerary.endingPOI
     places = itinerary.get_itinerary_places()
     steps = itinerary.steps.all()
     travel_methods = itinerary.get_all_travel_methods()
     print("............creating objects....")
     header = "(define (problem {})\n\
         (:domain touristinfo)".format(itinerary.slug)
-    objects = "\n\t(:objects hotel"
+    objects = "\n\t(:objects "
     init = "\t(:init \n"
     times = ""
-    tourist_location = "\t\t(at tourist1 {0})\n".format("hotel") #TODO: real data
+    goals = "{0}(:goal\n{1}(and\n".format(tabs[1], tabs[2])
+    if initial_location:
+        tourist_starting_location = "{0}(at tourist1 {1})\n".format(
+            tabs[2], initial_location.slug)
+    if ending_location:
+        tourist_ending_location = "{0}(at tourist1 {1})\n".format(
+            tabs[3], ending_location.slug)
+        goals += tourist_ending_location
+    else:
+        goals += "{0}{1}".format(tabs[1], tourist_starting_location)
     paths = ""
     traveltimes = ""
     visit_for = ""
-    goals = "\t(:goal\n\t\t(and\n\t\t\t(at tourist1 hotel)\n"
-    constraints = "\t(:constraints"
+    constraints = "{0}(:constraints\n{1}(and\n".format(tabs[1],tabs[2])
     metrics = "\t(:metric minimize\n\t\t(+\n\t\t\t(total-time)\n\t\t\t(* {}\
     \n\t\t\t\t(+\n".format(1000)
     for step in steps:
         # first we get the paths
-        #if step.origin.slug != place:
+        # if step.origin.slug != place:
         origin = step.origin.slug
         destination = step.destination.slug
         method = step.get_travel_method()
-        camelCase = step.origin.get_camelCase()
+        camel_case = step.origin.get_camelCase()
         # we need the duration in minutes rounded
-        duration = round(step.duration/60,2)
-        paths += "\t\t(path {0} {1})\n".format(origin, destination)
+        duration = round(step.duration / 60, 2)
+        paths += "{0}(path {1} {2})\n".format(tabs[2], origin, destination)
         # afterwards we need to get the traveltimes per traveling method
         # for travel_method in travel_methods:
-        traveltimes += "\t\t(=(traveltime {0} {1} {2}){3})\n".format(method, origin, destination,duration)
-        traveltimes += "\t\t(=(traveltime {0} {1} {2}){3})\n".format(method, "hotel", destination,randrange(5,45))
-        traveltimes += "\t\t(=(traveltime {0} {1} {2}){3})\n".format(method, origin, "hotel",randrange(5,45))
+        traveltimes += "{0}(=(traveltime {1} {2} {3}){4})\n".format(
+            tabs[2], method, origin, destination, duration)
         # then we get the opening and closing times if they exist. otherwise none
         if step.origin.opens != "":
-            times +="\t\t(at {0} (open {1}))\n".format(step.origin.opens, step.origin.slug)
-            times +="\t\t(at {0} (not (open {1})))\n".format(step.origin.closes, step.origin.slug)    
-        # getting the duration of the visits.
-        visit_for += "\t\t(=(visitfor {0} tourist1){1})\n".format(origin,30)
-        # getting the goals
-        goals += "\t\t\t(preference {0} (at end (visited tourist1 {1})))\n".format(camelCase,origin)
-        metrics += "\t\t\t\t\t(is-violated {})\n".format(camelCase)
-    visit_for+="\t)\n" # ending of visit_for
-    goals+="\t\t)\n\t)\n" # ending of goals
-    metrics+="\t\t\t\t)\n\t\t\t)\n\t\t)\n\t)\n)"
+            times += "{0}(at {1} (open {2}))\n".format(
+                tabs[2], step.origin.opens, step.origin.slug)
+            times += "{0}(at {1} (not (open {2})))\n".format(
+                tabs[2], step.origin.closes, step.origin.slug)
+
+        metrics += "\t\t\t\t\t(is-violated {})\n".format(camel_case)
+    metrics += "\t\t\t\t)\n\t\t\t)\n\t\t)\n\t)\n)"
     for place in places:
-        objects+="{} ".format(place)
-        paths += "\t\t(path {0} {1})\n".format("hotel", place)
-        paths += "\t\t(path {0} {1})\n".format(place, "hotel")
-    objects+=" - location tourist1 - tourist bus walk - mode)\n"    
-    print(header,objects,init,times,tourist_location,times,paths,traveltimes,visit_for,goals,constraints)
+        place_preferences = itinerary.itinerary_preference.filter(
+            place__slug=place).get()
+        objects += "{} ".format(place)
+        # getting the duration of the visits.
+        if place_preferences:
+            # getting the constraints
+            constraints += "{0}(preference {1} (at end (visited tourist1 {2})))\n".format(tabs[3], camel_case, origin)
+            visit_for += "{0}(=(visitfor {1} tourist1){2})\n".format(
+                tabs[2], place, place_preferences.visitFor)
+            if place_preferences.must_visit:
+                goals += "{0}(preference {1} (visited tourist1 {2}))\n".format(
+                    tabs[3], place_preferences.place.get_camelCase(), place)
+
+    visit_for += "\t)\n"  # ending of visit_for
+    goals += "\t\t)\n\t)\n"  # ending of goals
+    constraints += "{0})\n{1})".format(tabs[2], tabs[1])
+    objects += " - location tourist1 - tourist bus walk - mode)\n"
+    print(header, objects, init, times, tourist_starting_location,
+          times, paths, traveltimes, visit_for, goals, constraints)
