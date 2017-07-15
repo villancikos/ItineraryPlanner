@@ -239,12 +239,12 @@
         function make_json_marker(marker) {
             let has_opening_hours = marker.placeResult.hasOwnProperty('opening_hours');
             let today = moment().format('d');
-            let opens = 'null';
-            let closes = 'null';
+            let opens = null;
+            let closes = null;
             if (has_opening_hours){
                 try {
                     opens =  marker.placeResult.opening_hours.periods[today].open.time;
-                    marker.placeResult.opening_hours.periods[today].close.time
+                    closes = marker.placeResult.opening_hours.periods[today].close.time
                 }
                 catch (e){
                     console.log("Following Error occurred:", e);

@@ -122,12 +122,6 @@ def create_pddl_problem(itinerary):
         # for travel_method in travel_methods:
         traveltimes += "{0}(=(traveltime {1} {2} {3}){4})\n".format(
             tabs[2], method, origin, destination, duration)
-        # then we get the opening and closing times if they exist. otherwise none
-        if step.origin.opens != "":
-            times += "{0}(at {1} (open {2}))\n".format(
-                tabs[2], step.origin.opens, step.origin.slug)
-            times += "{0}(at {1} (not (open {2})))\n".format(
-                tabs[2], step.origin.closes, step.origin.slug)
     for place in places:
         # Getting all the preferences added by the user on each place
         place_preferences = itinerary.itinerary_preference.filter(
@@ -135,10 +129,22 @@ def create_pddl_problem(itinerary):
         # we make sure to get the slug and camel case for the constraints and goals
         slug = place_preferences.place.slug
         camel_case = place_preferences.place.get_camelCase()
+        opens = place_preferences.place.opens
+        closes = place_preferences.place.closes
         # adding each of the places to the object declaration of the pddl program
         objects += "{0} ".format(place)
         # getting the duration of the visits.
         if place_preferences:
+            # get the opening and closing times if they exist otherwise opens at 0
+            if opens:
+                times += "{0}(at {1} (open {2}))\n".format(
+                    tabs[2], opens, slug)
+            if closes:
+                times += "{0}(at {1} (not (open {2})))\n".format(
+                    tabs[2], closes, slug)
+            else:
+                times += "{0}(at {1} (open {2}))\n".format(
+                    tabs[2], 0, slug)
             # getting the constraints
             # which places does the user wants to visit
             # TODO: make sure the constraints don't overlap everything else (overkill)
@@ -160,4 +166,4 @@ def create_pddl_problem(itinerary):
     metrics += "{0})\n{1})\n{2})\n{3})\n)".format(tabs[4],tabs[3],tabs[2],tabs[1],tabs[1])  
     objects += " - location tourist1 - tourist bus walk - mode)\n"
     print(header, objects, init, times, tourist_starting_location,
-          times, paths, traveltimes, visit_for, goals, constraints, metrics)
+          paths, traveltimes, visit_for, goals, constraints, metrics)
