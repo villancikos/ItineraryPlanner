@@ -1,13 +1,38 @@
 # -*- coding: utf-8 -*-
-import copy
 import calendar
+import copy
 import datetime
 import itertools
 import os
-from random import randrange
 import re
 import uuid
+from django.conf import settings
+from random import randrange
 from django.template.defaultfilters import slugify
+
+
+def write_pddl_file(file_contents, name_of_file="itinerary_problem.pddl"):
+    """
+    Creates the directory if it doesn't exist and the files needed
+
+    """
+    apps_dir = settings.APPS_DIR.root
+    try:
+        os.chdir(apps_dir + "/pddl_files")
+    except OSError:
+        os.mkdir("pddl_files")
+        os.chdir("pddl_files")
+    try:
+        os.chdir("user_files")
+    except FileExistsError:
+        os.mkdir("user_files")
+        os.chdir("user_files")
+    except FileNotFoundError:
+        os.mkdir("user_files")
+        os.chdir("user_files")
+    pddl_file = open(name_of_file, "w+")
+    pddl_file.write(file_contents)
+    pddl_file.close()
 
 
 def _slug_strip(value, separator=None):
@@ -105,9 +130,9 @@ def create_pddl_problem(itinerary):
     paths = ""
     traveltimes = ""
     visit_for = ""
-    constraints = "{0}(:constraints\n{1}(and\n".format(tabs[1],tabs[2])
+    constraints = "{0}(:constraints\n{1}(and\n".format(tabs[1], tabs[2])
     metrics = "\n{0}(:metric minimize\n{1}(+\n{2}(total-time)\n{3}(* {4}\
-    \n{5}(+\n".format(tabs[1],tabs[2],tabs[3],tabs[3],1000, tabs[4])
+    \n{5}(+\n".format(tabs[1], tabs[2], tabs[3], tabs[3], 1000, tabs[4])
     for step in steps:
         # first we get the paths
         # if step.origin.slug != place:
@@ -149,21 +174,25 @@ def create_pddl_problem(itinerary):
             # which places does the user wants to visit
             # TODO: make sure the constraints don't overlap everything else (overkill)
             # probably constraints are the place for must.
-            constraints += "{0}(preference {1} (at end (visited tourist1 {2})))\n".format(tabs[3],camel_case, slug)
+            constraints += "{0}(preference {1} (at end (visited tourist1 {2})))\n".format(tabs[3], camel_case, slug)
             # amount of time the user wants to spend in each place.
             visit_for += "{0}(=(visitfor {1} tourist1){2})\n".format(
                 tabs[2], place, place_preferences.visitFor)
-            # the user may say a place is a MUST in his list. 
+            # the user may say a place is a MUST in his list.
             # Therefore we evauate these preferences.
             if place_preferences.must_visit:
                 goals += "{0}(preference {1} (visited tourist1 {2}))\n".format(
-                    tabs[3],camel_case, slug)
-                metrics+= "{0}(is-violated {1})\n".format(tabs[5], camel_case )
-            
+                    tabs[3], camel_case, slug)
+                metrics += "{0}(is-violated {1})\n".format(tabs[5], camel_case)
+
     visit_for += "\t)\n"  # ending of visit_for
     goals += "\t\t)\n\t)\n"  # ending of goals
     constraints += "{0})\n{1})".format(tabs[2], tabs[1])
-    metrics += "{0})\n{1})\n{2})\n{3})\n)".format(tabs[4],tabs[3],tabs[2],tabs[1],tabs[1])  
+    metrics += "{0})\n{1})\n{2})\n{3})\n)".format(tabs[4], tabs[3], tabs[2], tabs[1], tabs[1])
     objects += " - location tourist1 - tourist bus walk - mode)\n"
-    print(header, objects, init, times, tourist_starting_location,
-          paths, traveltimes, visit_for, goals, constraints, metrics)
+    # print(header, objects, init, times, tourist_starting_location,
+    #      paths, traveltimes, visit_for, goals, constraints, metrics)
+    file_contents = header + objects + init + times + tourist_starting_location + \
+        paths + traveltimes + visit_for + goals + constraints + metrics
+    print(file_contents)
+    return file_contents

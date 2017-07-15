@@ -17,7 +17,7 @@ from django.views.generic.edit import FormView
 
 from .forms import PlacesOfInterestForm
 from .models import Itinerary, ItineraryStep, PlaceOfInterest, Preferences
-from ..utils.helpers import create_pddl_problem
+from ..utils.helpers import create_pddl_problem, write_pddl_file
 
 gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
 
@@ -88,8 +88,8 @@ class PlacesOfInterestView(FormView):
             # we first try update the place in case it exists.
             # otherwise we just create it and carry on with the
             # relations with other Models in the database
-            opens = place['opens'] or 0
-            closes = place['closes'] or 0
+            opens = place['opens'] or ""
+            closes = place['closes'] or ""
             obj, created = PlaceOfInterest.objects.update_or_create(  # pylint: disable=W0612
                 place_id=place['place_id'],
                 defaults={
@@ -155,7 +155,9 @@ class PlacesOfInterestView(FormView):
 
         # one liner to print steps just to verify
         [print(step) for step in itinerary.steps.all()]
-        create_pddl_problem(itinerary)
+        file_contents = create_pddl_problem(itinerary)
+        name_of_file = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
+        write_pddl_file(file_contents, name_of_file)
         # NEXT STEPS:::::::::::::::::::::::::::::
         # CREATE PDDL PROBLEM FILE
         # RUN PROBLEM FILE ON A SUBPROCESS

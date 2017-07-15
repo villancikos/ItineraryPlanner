@@ -212,6 +212,10 @@
         // Listener for the submit inside the sidebar list with selectedPlaces.
         $('#submitPlaceSelection').on('click', function (e) {
             e.preventDefault();
+            if (markers.length<=1){
+                alert("You need to add another location.");
+                return;
+            }
             // pending to disable button to stop user submitting turbo madness
             //console.log($(this));
             // DistanceMatrixCall goes to external Google Service
