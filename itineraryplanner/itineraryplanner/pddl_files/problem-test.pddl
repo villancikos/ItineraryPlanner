@@ -66,24 +66,38 @@
         (=(visitfor mclarenlondon tourist1)30))
 		
 		
-	(:goal (and (at tourist1 bigben	)
-		(preference Visitqueens-theatre (visited tourist1 queens-theatre))
-		(preference VisitBigBen (visited tourist1 bigben))
-		(preference VisitGreenPark (visited tourist1 greenpark))
-		(preference VisitMclarenLondon (visited tourist1 mclarenlondon))))
+	(:goal 
+		(and 
+			(at tourist1 bigben	)
+			(preference Visitqueens-theatre (visited tourist1 queens-theatre))
+			(preference VisitBigBen (visited tourist1 bigben))
+			(preference VisitGreenPark (visited tourist1 greenpark))
+			(preference VisitMclarenLondon (visited tourist1 mclarenlondon))
+		)
+	)
 
-	(:constraints (and 
-	(preference Visitqueens-theatre (at end (visited tourist1 queens-theatre)))
-	(preference VisitBigBen (at end (visited tourist1 bigben)))
-	(preference VisitGreenPark (at end (visited tourist1 greenpark)))
-	(preference VisitMclarenLondon (at end (visited tourist1 mclarenlondon)))))
-;;PREGUNTA QUE PASA SI NO PONEMOS ESTO? COMO PODEMOS AFECTARLO?
-;;TODO DEPENDE DE SI PODEMOS IGNORAR EL ISVIOLATED?
-;;LA DUDA ES SI EN LAS PEFERENCIAS PONGO ESTO O QUE
-	(:metric minimize (+ (total-time) (* 1000 
-	(+ (is-violated Visitqueens-theatre) 
-	(is-violated VisitBigBen) 
-	(is-violated VisitGreenPark)
-	(is-violated VisitMclarenLondon)
-	
-	)))))
+	(:constraints 
+		(and 
+			(preference Visitqueens-theatre (at end (visited tourist1 queens-theatre)))
+			(preference VisitBigBen (at end (visited tourist1 bigben)))
+			(preference VisitGreenPark (at end (visited tourist1 greenpark)))
+			(preference VisitMclarenLondon (at end (visited tourist1 mclarenlondon)))
+		)
+	)
+	;;PREGUNTA QUE PASA SI NO PONEMOS ESTO? COMO PODEMOS AFECTARLO?
+	;;TODO DEPENDE DE SI PODEMOS IGNORAR EL ISVIOLATED?
+	;;LA DUDA ES SI EN LAS PEFERENCIAS PONGO ESTO O QUE
+	(:metric minimize 
+		(+ 
+			(total-time) 
+			(* 1000 
+				(+ 
+					(is-violated Visitqueens-theatre) 
+					(is-violated VisitBigBen) 
+					(is-violated VisitGreenPark)
+					(is-violated VisitMclarenLondon)
+				)
+			)
+		)
+	)
+) ; program closing

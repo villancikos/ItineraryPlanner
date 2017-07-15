@@ -87,7 +87,7 @@ def create_pddl_problem(itinerary):
     steps = itinerary.steps.all()
     travel_methods = itinerary.get_all_travel_methods()
     print("............creating objects....")
-    header = "(define (problem {})\n\
+    header = "(define (problem itinerary-{})\n\
         (:domain touristinfo)".format(itinerary.slug)
     objects = "\n\t(:objects "
     init = "\t(:init \n"
@@ -106,8 +106,8 @@ def create_pddl_problem(itinerary):
     traveltimes = ""
     visit_for = ""
     constraints = "{0}(:constraints\n{1}(and\n".format(tabs[1],tabs[2])
-    metrics = "\t(:metric minimize\n\t\t(+\n\t\t\t(total-time)\n\t\t\t(* {}\
-    \n\t\t\t\t(+\n".format(1000)
+    metrics = "\n{0}(:metric minimize\n{1}(+\n{2}(total-time)\n{3}(* {4}\
+    \n{5}(+\n".format(tabs[1],tabs[2],tabs[3],tabs[3],1000, tabs[4])
     for step in steps:
         # first we get the paths
         # if step.origin.slug != place:
@@ -128,26 +128,36 @@ def create_pddl_problem(itinerary):
                 tabs[2], step.origin.opens, step.origin.slug)
             times += "{0}(at {1} (not (open {2})))\n".format(
                 tabs[2], step.origin.closes, step.origin.slug)
-
-        metrics += "\t\t\t\t\t(is-violated {})\n".format(camel_case)
-    metrics += "\t\t\t\t)\n\t\t\t)\n\t\t)\n\t)\n)"
     for place in places:
+        # Getting all the preferences added by the user on each place
         place_preferences = itinerary.itinerary_preference.filter(
             place__slug=place).get()
-        objects += "{} ".format(place)
+        # we make sure to get the slug and camel case for the constraints and goals
+        slug = place_preferences.place.slug
+        camel_case = place_preferences.place.get_camelCase()
+        # adding each of the places to the object declaration of the pddl program
+        objects += "{0} ".format(place)
         # getting the duration of the visits.
         if place_preferences:
             # getting the constraints
-            constraints += "{0}(preference {1} (at end (visited tourist1 {2})))\n".format(tabs[3], camel_case, origin)
+            # which places does the user wants to visit
+            # TODO: make sure the constraints don't overlap everything else (overkill)
+            # probably constraints are the place for must.
+            constraints += "{0}(preference {1} (at end (visited tourist1 {2})))\n".format(tabs[3],camel_case, slug)
+            # amount of time the user wants to spend in each place.
             visit_for += "{0}(=(visitfor {1} tourist1){2})\n".format(
                 tabs[2], place, place_preferences.visitFor)
+            # the user may say a place is a MUST in his list. 
+            # Therefore we evauate these preferences.
             if place_preferences.must_visit:
                 goals += "{0}(preference {1} (visited tourist1 {2}))\n".format(
-                    tabs[3], place_preferences.place.get_camelCase(), place)
-
+                    tabs[3],camel_case, slug)
+                metrics+= "{0}(is-violated {1})\n".format(tabs[5], camel_case )
+            
     visit_for += "\t)\n"  # ending of visit_for
     goals += "\t\t)\n\t)\n"  # ending of goals
     constraints += "{0})\n{1})".format(tabs[2], tabs[1])
+    metrics += "{0})\n{1})\n{2})\n{3})\n)".format(tabs[4],tabs[3],tabs[2],tabs[1],tabs[1])  
     objects += " - location tourist1 - tourist bus walk - mode)\n"
     print(header, objects, init, times, tourist_starting_location,
-          times, paths, traveltimes, visit_for, goals, constraints)
+          times, paths, traveltimes, visit_for, goals, constraints, metrics)
