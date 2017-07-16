@@ -13,7 +13,7 @@ class PlacesOfInterestForm(forms.Form):
     containing all the places the user wants to visit.
     """
     placesToVisit = forms.CharField()
-    distanceMatrix = forms.CharField()
+    # distanceMatrix = forms.CharField()
 
     def clean_places(self):
         """
@@ -39,11 +39,11 @@ class PlacesOfInterestForm(forms.Form):
         """
         #TODO: Implement a cleansing method for the json
         places_to_visit_raw = self.cleaned_data['placesToVisit']
-        distance_matrix_raw = self.cleaned_data['distanceMatrix']
+        # distance_matrix_raw = self.cleaned_data['distanceMatrix']
 
         try:
             # validate raw data
-            json_data = json.loads(places_to_visit_raw, distance_matrix_raw)
+            json_data = json.loads(places_to_visit_raw)
         except:
             raise forms.ValidationError("Invalid data in the Json")
         return json_data
