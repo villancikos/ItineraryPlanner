@@ -161,15 +161,15 @@ def create_pddl_problem(itinerary):
         # getting the duration of the visits.
         if place_preferences:
             # get the opening and closing times if they exist otherwise opens at 0
-            if opens:
-                times += "{0}(at {1} (open {2}))\n".format(
-                    tabs[2], opens, slug)
-            if closes:
-                times += "{0}(at {1} (not (open {2})))\n".format(
-                    tabs[2], closes, slug)
-            else:
-                times += "{0}(at {1} (open {2}))\n".format(
-                    tabs[2], 0, slug)
+            if opens and closes:
+                # Normal Escenario with opening and closing times
+                times += "{0}(at {1} (open {2}))\n".format(tabs[2], opens, slug)                    
+                times += "{0}(at {1} (not (open {2})))\n".format(tabs[2], closes, slug)
+            elif opens:
+                # scenario where place opens 24 hours so no closing.
+                if opens == '0000':
+                    # means that the place opens 24 hours  
+                    times += "{0}(at {1} (open {2}))\n".format(tabs[2], 0, slug)
             # getting the constraints
             # which places does the user wants to visit
             # TODO: make sure the constraints don't overlap everything else (overkill)

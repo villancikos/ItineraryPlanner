@@ -117,7 +117,7 @@
             // For each place, get the icon, name and location.
             var bounds = new google.maps.LatLngBounds();
             places.forEach(function (place) {
-                console.log("places",place);
+                //console.log("places",place);
                 ferTestList.push(place);
                 if (!place.geometry) {
                     console.log("Returned place contains no geometry");
@@ -136,7 +136,6 @@
             map.fitBounds(bounds);
         });
         function callbackFunction(response, status) {
-
             if (status !== 'OK') {
                 console.log('Error was: ' + status);
             } else {
@@ -200,9 +199,11 @@
                         // What we receive from success on server side.
                         console.log("success!");
                         console.log(json);
+                        $("#submitPlaceSelection").attr("disabled", false);
                     },
                     error: function (json) {
                         // in case of error we get this from server
+                        $("#submitPlaceSelection").attr("disabled", false);
                         console.log("Was error");
                     },
                 });
@@ -212,8 +213,10 @@
         // Listener for the submit inside the sidebar list with selectedPlaces.
         $('#submitPlaceSelection').on('click', function (e) {
             e.preventDefault();
+            $("#submitPlaceSelection").attr("disabled", true);
             if (markers.length<=1){
-                alert("You need to add another location.");
+                alert("You need to add more than one location.");
+                $("#submitPlaceSelection").attr("disabled", false);
                 return;
             }
             // pending to disable button to stop user submitting turbo madness
@@ -221,12 +224,17 @@
             // DistanceMatrixCall goes to external Google Service
             // Therefore we wrap it up in a different function with
             // its callback.
-            distanceMatrixCall()
+            var toSubmitList = []
+                markers.map(function (marker) {
+                    return toSubmitList.push(make_json_marker(marker));
+                });
+            var toSubmitJsonList = JSON.stringify(toSubmitList);
+            
             var csrftoken = Cookies.get('csrftoken');
             function csrfSafeMethod(method) {
                 // these HTTP methods do not require CSRF protection
                 return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-            }
+            };
             $.ajaxSetup({
                 beforeSend: function (xhr, settings) {
                     if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
@@ -234,31 +242,31 @@
                     }
                 }
             });
+            $.ajax({
+                    type: "POST",
+                    url: successURL,
+                    data: { placesToVisit: toSubmitJsonList },
+                    success: function (json) {
+                        // What we receive from success on server side.
+                        console.log("success!");
+                        console.log(json);
+                        $("#submitPlaceSelection").attr("disabled", false);
+                    },
+                    error: function (json) {
+                        // in case of error we get this from server
+                        $("#submitPlaceSelection").attr("disabled", false);
+                        console.log("Was error");
+                    },
+            });
         });
 
         // Listener for Clear button in case user wants to delete every marker from map
         $('#clearPlaces').on('click', function (e) { clearOldMarkers(); });
 
-        
         function make_json_marker(marker) {
-            let has_opening_hours = marker.placeResult.hasOwnProperty('opening_hours');
-            let today = moment().format('d');
-            let opens = null;
-            let closes = null;
-            if (has_opening_hours){
-                try {
-                    opens =  marker.placeResult.opening_hours.periods[today].open.time;
-                    closes = marker.placeResult.opening_hours.periods[today].close.time
-                }
-                catch (e){
-                    console.log("Following Error occurred:", e);
-                }
-            }
-            //let opens = has_opening_hours ? marker.placeResult.opening_hours.periods[today].open.time : 'null';
-            //let closes = has_opening_hours ? marker.placeResult.opening_hours.periods[today].close.time : 'null';
-            console.log(marker.placeResult.name," opens at: ", opens);
-            console.log(marker.placeResult.name," closes at: ", closes);
-
+            let openingTimes = getPlaceOpeningTimes(marker.placeResult);
+            let opens = openingTimes.opens;
+            let closes = openingTimes.closes;
             let $marker_obj = {
                 "place_id": marker.placeResult.place_id,
                 "is_hotel": false,
@@ -277,7 +285,28 @@
             placesSelected.push(googlePlace);
             // addSelectedPlaceToSidebar(googlePlace);
         }
-
+        function getPlaceOpeningTimes(placeResult){
+            let has_opening_hours = placeResult.hasOwnProperty('opening_hours');
+            let today = moment().format('d');
+            let opens = null;
+            let closes = null;            
+            if (has_opening_hours) {
+                if (placeResult.opening_hours.periods.length === 1) {
+                    // it opens 24 hours. Therefore not closing.
+                    if (!placeResult.opening_hours.periods[0].hasOwnProperty('close')) {
+                        opens = '0000'
+                    }
+                }
+                else {
+                    opens = placeResult.opening_hours.periods[today].open.time;
+                    closes = placeResult.opening_hours.periods[today].close.time;
+                }
+            }
+            return {
+                    'opens': opens,
+                    'closes': closes
+            }
+        }
         function addSelectedPlaceToSidebar(googlePlaceMarker) {
             // if the place already exists in our list ignore
             var searchedPlaces = document.getElementById('searchedPlaces');
@@ -289,6 +318,10 @@
                 var ul = searchedPlaces.children[0];
             }
             var name = document.createTextNode(googlePlaceMarker.title);
+            console.log(googlePlaceMarker.placeResult.name);
+            var openingTimes = getPlaceOpeningTimes(googlePlaceMarker.placeResult);
+            console.log(openingTimes.opens);
+            console.log(openingTimes.closes);
             var li = document.createElement('li');
             li.className = 'list-group-item';
             li.appendChild(name);
@@ -397,9 +430,11 @@
                 position: place.geometry.location,
                 animation: google.maps.Animation.DROP,
             });
-            // Fill the marker to the global Dict
+            // Fill the marker with the Google Place Result
             googlePlaceMarker.placeResult = place;
+            // Add the listener to the map on click.
             google.maps.event.addListener(googlePlaceMarker, "click", showInfoWindow);
+            // Push the entire marker to the markers dict.
             markers.push(googlePlaceMarker);
             //var json_markers = markers.map(function (place) {
             //    //return jsonifyPlace(place);
