@@ -99,6 +99,12 @@ def unique_slugify(instance, value, slug_field_name='slug', queryset=None,
 
 
 def create_pddl_problem(itinerary):
+    """ Helper function that forms the pddl file of th given itinerary.
+    The customization in each pddl file will be created using the
+    preferences properties inside the Preference table attached to each
+    itinerary (i.e. each itinerary contains preferences at least for 
+    one place and at most one for each of the places involced)
+    """
     tabs = {
         1: '\t',
         2: '\t\t',
@@ -163,18 +169,22 @@ def create_pddl_problem(itinerary):
             # get the opening and closing times if they exist otherwise opens at 0
             if opens and closes:
                 # Normal Escenario with opening and closing times
-                times += "{0}(at {1} (open {2}))\n".format(tabs[2], opens, slug)                    
-                times += "{0}(at {1} (not (open {2})))\n".format(tabs[2], closes, slug)
+                times += "{0}(at {1} (open {2}))\n".format(
+                    tabs[2], opens, slug)
+                times += "{0}(at {1} (not (open {2})))\n".format(
+                    tabs[2], closes, slug)
             elif opens:
                 # scenario where place opens 24 hours so no closing.
                 if opens == '0000':
-                    # means that the place opens 24 hours  
-                    times += "{0}(at {1} (open {2}))\n".format(tabs[2], 0, slug)
+                    # means that the place opens 24 hours
+                    times += "{0}(at {1} (open {2}))\n".format(
+                        tabs[2], 0, slug)
             # getting the constraints
             # which places does the user wants to visit
             # TODO: make sure the constraints don't overlap everything else (overkill)
             # probably constraints are the place for must.
-            constraints += "{0}(preference {1} (at end (visited tourist1 {2})))\n".format(tabs[3], camel_case, slug)
+            constraints += "{0}(preference {1} (at end (visited tourist1 {2})))\n".format(
+                tabs[3], camel_case, slug)
             # amount of time the user wants to spend in each place.
             visit_for += "{0}(=(visitfor {1} tourist1){2})\n".format(
                 tabs[2], place, place_preferences.visitFor)
@@ -188,7 +198,8 @@ def create_pddl_problem(itinerary):
     visit_for += "\t)\n"  # ending of visit_for
     goals += "\t\t)\n\t)\n"  # ending of goals
     constraints += "{0})\n{1})".format(tabs[2], tabs[1])
-    metrics += "{0})\n{1})\n{2})\n{3})\n)".format(tabs[4], tabs[3], tabs[2], tabs[1], tabs[1])
+    metrics += "{0})\n{1})\n{2})\n{3})\n)".format(
+        tabs[4], tabs[3], tabs[2], tabs[1], tabs[1])
     objects += " - location tourist1 - tourist bus walk - mode)\n"
     # print(header, objects, init, times, tourist_starting_location,
     #      paths, traveltimes, visit_for, goals, constraints, metrics)
@@ -196,3 +207,66 @@ def create_pddl_problem(itinerary):
         paths + traveltimes + visit_for + goals + constraints + metrics
     print(file_contents)
     return file_contents
+
+
+def read_optic_output(itinerary_slug):
+    """ This method will get the itinerary output 
+    file and convert it into a big string. 
+    After that other functions can use the entire plan.
+    """
+    apps_dir = settings.APPS_DIR.root
+    outputs_dir = "/pddl_files/outputs/itinerary-{}.txt".format(itinerary_slug)
+    file_loc = apps_dir+outputs_dir
+    # immediately need to run read otherwise is lost...
+    file = open(file_loc, 'r')
+    # plan should be a string.
+    plan = file.read()
+    # look for the "with open..." code to avoid manual close.
+    file.close()
+    return convert_plan(plan)
+    #raise NotImplementedError()
+
+def convert_plan(plan):
+    """ This method receives the plan as a string. 
+    Then it runs through the regex compiler to produce a set of instructions.
+    After this it returns a dictionary with the name of the place as the key,
+    and both the index (order in which the planner suggest to visit the place)
+    and the duration of the 'task' as values.
+    """
+    instruction_set = {}
+    # Using python raw string to avoid multiple escape chars '/'.
+    regex = re.compile(
+        r"^\d{1,5}.\d{1,5}: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$", re.MULTILINE)
+    if isinstance(plan, str):
+        # parse all the instructions computed by OPTIC
+        planner_steps = regex.findall(plan)
+    step_count = len(planner_steps)
+    instruction_zero = []
+    for step_index in range(0, step_count):
+        if planner_steps[step_index].find('0.000:') == 0:
+            instruction_zero.append(step_index)
+    optimal_instructions = []
+    # look for the last batch of instructions computed by OPTIC
+    for line in range(instruction_zero[-1], step_count):
+        optimal_instructions.append(planner_steps[line])
+    print(optimal_instructions)
+
+    # now that we have the optimal instructions we need to assign
+    # them to the  instruction_set to return an object.
+    counter = 0
+    for instruction in optimal_instructions:
+        moving_instruction = re.findall(r"\(move.+\)", instruction)
+        for move in moving_instruction:
+            splitter = []  #  will hold each bit of each instruction
+            starting = move.find("(") + 1
+            ending = move.find(")")
+            splitter = move[starting:ending].split()
+            # print(splitter)
+            instruction_set[counter] = {
+                'method': splitter[-1],
+                'from': splitter[-3],
+                'to': splitter[-2]
+            }
+            counter = counter+1
+    print(instruction_set)
+    return instruction_set

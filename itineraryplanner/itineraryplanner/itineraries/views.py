@@ -113,8 +113,8 @@ class PlacesOfInterestView(FormView):
         # Create an Itinerary Object to hold the tour.
         itinerary = Itinerary()
         # TODO: Remove this default initial place of interest.
-        # in the near future we want the user to selet his desired starting point
-        # i.e. the HOTEL kind of...
+        # in the near future we want the user to select his desired starting point
+        # e.g. the HOTEL or another initial Place of Interest
         random_place = created_places[randrange(0, len(created_places))]
         itinerary.initialPOI = random_place
         itinerary.save()
