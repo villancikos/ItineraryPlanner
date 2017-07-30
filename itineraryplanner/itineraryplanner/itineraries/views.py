@@ -17,7 +17,7 @@ from django.views.generic.edit import FormView
 
 from .forms import PlacesOfInterestForm
 from .models import Itinerary, ItineraryStep, PlaceOfInterest, Preferences
-from ..utils.helpers import create_pddl_problem, write_pddl_file
+from ..utils.helpers import create_pddl_problem, write_pddl_file,run_subprocess,convert_plan
 
 gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
 
@@ -156,8 +156,10 @@ class PlacesOfInterestView(FormView):
         # one liner to print steps just to verify
         [print(step) for step in itinerary.steps.all()]
         file_contents = create_pddl_problem(itinerary)
-        name_of_file = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
-        write_pddl_file(file_contents, name_of_file)
+        file_name = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
+        write_pddl_file(file_contents, file_name)
+        plan = run_subprocess(itinerary.slug,sleep_for=10)
+        plan_dict = convert_plan(plan)
         # NEXT STEPS:::::::::::::::::::::::::::::
         # CREATE PDDL PROBLEM FILE
         # RUN PROBLEM FILE ON A SUBPROCESS
@@ -171,7 +173,7 @@ class PlacesOfInterestView(FormView):
         if self.request.is_ajax():
             # Request is ajax, send a json response
             data = {
-                'message:': 'Whatevs'
+                'final_plan:': str(plan_dict)
             }
             return self.render_to_json_response(data)
         return response
