@@ -232,11 +232,12 @@ def convert_plan(plan):
     and both the index (order in which the planner suggest to visit the place)
     and the duration of the 'task' as values.
     """
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     instruction_set = {}
     # Using python raw string to avoid multiple escape chars '/'.
+    # import ipdb;ipdb.set_trace()
     regex = re.compile(
-        r"^\d{1,3}.\d{1,3}: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$", re.MULTILINE)
+        r"^\d+.\d+: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$", re.MULTILINE)
     find_goals = re.compile(r"(?<=; Plan found with metric )\d+.\d+",re.MULTILINE)
     last_result_index = None
     for last_result_index in find_goals.finditer(plan):
@@ -245,6 +246,7 @@ def convert_plan(plan):
     counter = 0
     for instruction in planner_steps:
         moving_instruction = re.findall(r"\(move.+\)", instruction)
+        print("Moving Instructions: ", moving_instruction)
         for move in moving_instruction:
             splitter = []  #  will hold each bit of each instruction
             starting = move.find("(") + 1
@@ -254,7 +256,8 @@ def convert_plan(plan):
             instruction_set[counter] = {
                 'method': splitter[-1],
                 'from': splitter[-3],
-                'to': splitter[-2]
+                'to': splitter[-2],
+                'index': counter,
             }
             counter = counter+1
     print(instruction_set)

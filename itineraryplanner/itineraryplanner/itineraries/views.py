@@ -122,7 +122,7 @@ class PlacesOfInterestView(FormView):
             Preferences.objects.create(
                 itinerary=itinerary,
                 place=place,
-                visitFor=randrange(15, 120)
+                visitFor=randrange(30, 90)
             )
         # Traverse all the possible origins
         for origin in places_to_visit:
@@ -145,7 +145,14 @@ class PlacesOfInterestView(FormView):
                         mode="walking",
                         language="english"
                     )
+                    dmy = gmaps.distance_matrix(
+                        origins='place_id:{}'.format(origin['place_id']),
+                        destinations='place_id:{}'.format(destination['place_id']),
+                        mode='transit',
+                        language="english")
+                    print(dmy)
                     duration = dmx['rows'][0]['elements'][0]['duration']['value']
+
                     it_step.duration = duration
                     it_step.save()
 
@@ -158,8 +165,21 @@ class PlacesOfInterestView(FormView):
         file_contents = create_pddl_problem(itinerary)
         file_name = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
         write_pddl_file(file_contents, file_name)
-        plan = run_subprocess(itinerary.slug,sleep_for=10)
+        plan = run_subprocess(itinerary.slug,sleep_for=5)
         plan_dict = convert_plan(plan)
+        for index in range(len(plan_dict)):
+
+            current_step_qs = itinerary.steps.all().filter(
+                origin__slug=plan_dict[index]['from']
+            ).filter(
+                destination__slug=plan_dict[index]['to']
+            ).get()
+            # ).filter(
+            #     method=ItineraryStep.METHOD_CHOICES[plan_dict[]]
+            # ).get()
+            current_step_qs.index = plan_dict[index]['index']
+            current_step_qs.save()
+            print(current_step_qs.index,":",current_step_qs.origin,"->",current_step_qs.destination,":",current_step_qs.method)
         # NEXT STEPS:::::::::::::::::::::::::::::
         # CREATE PDDL PROBLEM FILE
         # RUN PROBLEM FILE ON A SUBPROCESS

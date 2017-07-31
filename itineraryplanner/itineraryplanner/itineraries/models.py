@@ -181,7 +181,7 @@ class ItineraryStep(TimeStampedModel):
         default=0,
     )
     index = models.PositiveSmallIntegerField(
-        default=0,
+        default=32767,
     )
 
     def get_travel_method(self):
