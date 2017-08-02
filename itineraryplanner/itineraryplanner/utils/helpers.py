@@ -179,6 +179,9 @@ def create_pddl_problem(itinerary):
                     # means that the place opens 24 hours
                     times += "{0}(at {1} (open {2}))\n".format(
                         tabs[2], 0, slug)
+            else:
+                times += "{0}(at {1} (open {2}))\n".format(
+                    tabs[2], 0, slug)
             # getting the constraints
             # which places does the user wants to visit
             # TODO: make sure the constraints don't overlap everything else (overkill)
@@ -240,8 +243,12 @@ def convert_plan(plan):
         r"^\d+.\d+: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$", re.MULTILINE)
     find_goals = re.compile(r"(?<=; Plan found with metric )\d+.\d+",re.MULTILINE)
     last_result_index = None
+    # TODO: Improve this iteration as right now seems prone to errors.
+    
     for last_result_index in find_goals.finditer(plan):
         pass
+    if not last_result_index:
+        raise(TypeError)
     planner_steps = regex.findall(plan,last_result_index.span()[1])
     counter = 0
     for instruction in planner_steps:

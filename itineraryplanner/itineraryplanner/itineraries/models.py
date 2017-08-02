@@ -195,7 +195,7 @@ class ItineraryStep(TimeStampedModel):
         ordering = ["index", "created"]
 
     def __str__(self):
-        return 'Itinerary step from {0} to {1}. Method: {2}. Duration:{3}'.format(
+        return 'Itinerary step from {0} to {1}. Method: {2}. Duration:{3}\n'.format(
             self.origin, self.destination, self.METHOD_CHOICES[self.method], self.duration)
 
 
