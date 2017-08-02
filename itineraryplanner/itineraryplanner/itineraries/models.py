@@ -204,6 +204,12 @@ class Preferences(TimeStampedModel):
     Each user will have many preferences
     for each itinerary.
     """
+    PRIORITY_CHOICES = Choices(
+        (0, 'LOW', 'low'),
+        (1, 'MEDIUM', 'medium'),
+        (2, 'HIGH', 'high'),
+        (3, 'TOP', 'top'),
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -228,7 +234,10 @@ class Preferences(TimeStampedModel):
     must_visit = models.BooleanField(
         default=True,
     )
-
+    priority = models.PositiveSmallIntegerField(
+        choices=PRIORITY_CHOICES,
+        default=PRIORITY_CHOICES.LOW,
+    )
     class Meta:
         verbose_name = _("Itinerary Preference")
         verbose_name_plural= _("Itinerary Preferences")
