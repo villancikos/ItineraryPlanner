@@ -49,5 +49,8 @@ Temporary Items
 # Ignore VSCode File
 .vscode
 
-# Ignoree user Files
+# Ignore user Files
 /itineraryplanner/itineraryplanner/pddl_files/user_files/
+
+# Ignore output Files
+/itineraryplanner/itineraryplanner/pddl_files/outputs/

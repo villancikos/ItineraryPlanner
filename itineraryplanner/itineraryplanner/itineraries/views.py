@@ -12,12 +12,12 @@ from random import randrange
 
 import googlemaps
 from django.core.urlresolvers import reverse_lazy
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.generic.edit import FormView
 
 from .forms import PlacesOfInterestForm
 from .models import Itinerary, ItineraryStep, PlaceOfInterest, Preferences
-from ..utils.helpers import create_pddl_problem, write_pddl_file
+from ..utils.helpers import create_pddl_problem, write_pddl_file,run_subprocess,convert_plan
 
 gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
 
@@ -68,8 +68,8 @@ class PlacesOfInterestView(FormView):
         # This method is called when valid form data has been POSTed.
         # It should return an HttpResponse.
 
-        places_to_visit_json = form.cleaned_data['placesToVisit']
-        places_to_visit = json.loads(places_to_visit_json)
+        #places_to_visit_json = form.cleaned_data['placesToVisit']
+        places_to_visit = json.loads(form.cleaned_data['placesToVisit'])
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
         created_places = []
@@ -122,7 +122,7 @@ class PlacesOfInterestView(FormView):
             Preferences.objects.create(
                 itinerary=itinerary,
                 place=place,
-                visitFor=randrange(15, 120)
+                visitFor=randrange(30, 90)
             )
         # Traverse all the possible origins
         for origin in places_to_visit:
@@ -137,6 +137,7 @@ class PlacesOfInterestView(FormView):
                         origin=origin_poi,
                         destination=destination_poi,
                         itinerary=itinerary,
+                        # TODO: each transportation Method from Google api (driving, walking, bicycling, transit)
                         method=ItineraryStep.METHOD_CHOICES.WALK
                     )
                     dmx = gmaps.distance_matrix(
@@ -145,7 +146,15 @@ class PlacesOfInterestView(FormView):
                         mode="walking",
                         language="english"
                     )
+                    # Testing using different mode (transit)
+                    # dmy = gmaps.distance_matrix(
+                    #     origins='place_id:{}'.format(origin['place_id']),
+                    #     destinations='place_id:{}'.format(destination['place_id']),
+                    #     mode='transit',
+                    #     language="english")
+                    # print(dmy)
                     duration = dmx['rows'][0]['elements'][0]['duration']['value']
+
                     it_step.duration = duration
                     it_step.save()
 
@@ -155,9 +164,31 @@ class PlacesOfInterestView(FormView):
 
         # one liner to print steps just to verify
         [print(step) for step in itinerary.steps.all()]
+        # create the string that will be embeded in the problem file.
         file_contents = create_pddl_problem(itinerary)
-        name_of_file = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
-        write_pddl_file(file_contents, name_of_file)
+        file_name = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
+        # add contents to file.
+        write_pddl_file(file_contents, file_name)
+        plan = run_subprocess(itinerary.slug,sleep_for=5)
+        try: 
+            plan_dict = convert_plan(plan)
+        except TypeError:
+            data = {
+                'message':'An error occurred whilst running the itinerary.'
+            }
+            return JsonResponse(data, status=400)
+        for index in range(len(plan_dict)):
+            current_step_qs = itinerary.steps.all().filter(
+                origin__slug=plan_dict[index]['from']
+            ).filter(
+                destination__slug=plan_dict[index]['to']
+            ).get()
+            # ).filter(
+            #     method=ItineraryStep.METHOD_CHOICES[plan_dict[]]
+            # ).get()
+            current_step_qs.index = plan_dict[index]['index']
+            current_step_qs.save()
+            print(current_step_qs.index,":",current_step_qs.origin,"->",current_step_qs.destination,":",current_step_qs.method)
         # NEXT STEPS:::::::::::::::::::::::::::::
         # CREATE PDDL PROBLEM FILE
         # RUN PROBLEM FILE ON A SUBPROCESS
@@ -171,7 +202,7 @@ class PlacesOfInterestView(FormView):
         if self.request.is_ajax():
             # Request is ajax, send a json response
             data = {
-                'message:': 'Whatevs'
+                'final_plan:': str(plan_dict)
             }
-            return self.render_to_json_response(data)
+            return JsonResponse(data, status=200)
         return response

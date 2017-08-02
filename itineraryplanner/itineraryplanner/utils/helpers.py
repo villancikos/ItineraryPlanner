@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-import calendar
-import copy
-import datetime
 import itertools
 import os
+import pprint
 import re
-import uuid
-from django.conf import settings
+import subprocess
+import time
 from random import randrange
+
+from django.conf import settings
 from django.template.defaultfilters import slugify
 
+APPS_DIR = settings.APPS_DIR.root
 
-def write_pddl_file(file_contents, name_of_file="itinerary_problem.pddl"):
+def write_pddl_file(file_contents, file_name="itinerary_problem.pddl"):
     """
     Creates the directory if it doesn't exist and the files needed
 
     """
-    apps_dir = settings.APPS_DIR.root
     try:
-        os.chdir(apps_dir + "/pddl_files")
+        os.chdir(APPS_DIR + "/pddl_files")
     except OSError:
         os.mkdir("pddl_files")
         os.chdir("pddl_files")
@@ -30,7 +30,7 @@ def write_pddl_file(file_contents, name_of_file="itinerary_problem.pddl"):
     except FileNotFoundError:
         os.mkdir("user_files")
         os.chdir("user_files")
-    pddl_file = open(name_of_file, "w+")
+    pddl_file = open(file_name, "w+")
     pddl_file.write(file_contents)
     pddl_file.close()
 
@@ -102,7 +102,7 @@ def create_pddl_problem(itinerary):
     """ Helper function that forms the pddl file of th given itinerary.
     The customization in each pddl file will be created using the
     preferences properties inside the Preference table attached to each
-    itinerary (i.e. each itinerary contains preferences at least for 
+    itinerary (i.e. each itinerary contains preferences at least for
     one place and at most one for each of the places involced)
     """
     tabs = {
@@ -179,6 +179,9 @@ def create_pddl_problem(itinerary):
                     # means that the place opens 24 hours
                     times += "{0}(at {1} (open {2}))\n".format(
                         tabs[2], 0, slug)
+            else:
+                times += "{0}(at {1} (open {2}))\n".format(
+                    tabs[2], 0, slug)
             # getting the constraints
             # which places does the user wants to visit
             # TODO: make sure the constraints don't overlap everything else (overkill)
@@ -199,7 +202,7 @@ def create_pddl_problem(itinerary):
     goals += "\t\t)\n\t)\n"  # ending of goals
     constraints += "{0})\n{1})".format(tabs[2], tabs[1])
     metrics += "{0})\n{1})\n{2})\n{3})\n)".format(
-        tabs[4], tabs[3], tabs[2], tabs[1], tabs[1])
+        tabs[4], tabs[3], tabs[2], tabs[1])
     objects += " - location tourist1 - tourist bus walk - mode)\n"
     # print(header, objects, init, times, tourist_starting_location,
     #      paths, traveltimes, visit_for, goals, constraints, metrics)
@@ -210,13 +213,12 @@ def create_pddl_problem(itinerary):
 
 
 def read_optic_output(itinerary_slug):
-    """ This method will get the itinerary output 
-    file and convert it into a big string. 
+    """ This method will get the itinerary output
+    file and convert it into a big string.
     After that other functions can use the entire plan.
     """
-    apps_dir = settings.APPS_DIR.root
     outputs_dir = "/pddl_files/outputs/itinerary-{}.txt".format(itinerary_slug)
-    file_loc = apps_dir+outputs_dir
+    file_loc = APPS_DIR+outputs_dir
     # immediately need to run read otherwise is lost...
     file = open(file_loc, 'r')
     # plan should be a string.
@@ -227,35 +229,31 @@ def read_optic_output(itinerary_slug):
     #raise NotImplementedError()
 
 def convert_plan(plan):
-    """ This method receives the plan as a string. 
+    """ This method receives the plan as a string.
     Then it runs through the regex compiler to produce a set of instructions.
     After this it returns a dictionary with the name of the place as the key,
     and both the index (order in which the planner suggest to visit the place)
     and the duration of the 'task' as values.
     """
+    # import pdb;pdb.set_trace()
     instruction_set = {}
     # Using python raw string to avoid multiple escape chars '/'.
+    # import ipdb;ipdb.set_trace()
     regex = re.compile(
-        r"^\d{1,5}.\d{1,5}: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$", re.MULTILINE)
-    if isinstance(plan, str):
-        # parse all the instructions computed by OPTIC
-        planner_steps = regex.findall(plan)
-    step_count = len(planner_steps)
-    instruction_zero = []
-    for step_index in range(0, step_count):
-        if planner_steps[step_index].find('0.000:') == 0:
-            instruction_zero.append(step_index)
-    optimal_instructions = []
-    # look for the last batch of instructions computed by OPTIC
-    for line in range(instruction_zero[-1], step_count):
-        optimal_instructions.append(planner_steps[line])
-    print(optimal_instructions)
-
-    # now that we have the optimal instructions we need to assign
-    # them to the  instruction_set to return an object.
+        r"^\d+.\d+: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$", re.MULTILINE)
+    find_goals = re.compile(r"(?<=; Plan found with metric )\d+.\d+",re.MULTILINE)
+    last_result_index = None
+    # TODO: Improve this iteration as right now seems prone to errors.
+    
+    for last_result_index in find_goals.finditer(plan):
+        pass
+    if not last_result_index:
+        raise(TypeError)
+    planner_steps = regex.findall(plan,last_result_index.span()[1])
     counter = 0
-    for instruction in optimal_instructions:
+    for instruction in planner_steps:
         moving_instruction = re.findall(r"\(move.+\)", instruction)
+        print("Moving Instructions: ", moving_instruction)
         for move in moving_instruction:
             splitter = []  #  will hold each bit of each instruction
             starting = move.find("(") + 1
@@ -265,8 +263,45 @@ def convert_plan(plan):
             instruction_set[counter] = {
                 'method': splitter[-1],
                 'from': splitter[-3],
-                'to': splitter[-2]
+                'to': splitter[-2],
+                'index': counter,
             }
             counter = counter+1
     print(instruction_set)
     return instruction_set
+
+def run_subprocess(itinerary_slug, sleep_for=None, domain_file=None):
+    """
+    Receives the itinerary_slug of a tourist and runs it in Optic with the
+    given domain file. If no domain file is given, then the default domain
+    file is used. If no sleep_for time is given then we stop at 2 seconds.
+    """
+    if itinerary_slug is None:
+        raise IOError
+    if sleep_for is None:
+        sleep_for = 2.0
+    problem_file = APPS_DIR + "/pddl_files/user_files/itinerary-{}.pddl".format(itinerary_slug)
+    if not domain_file:
+        domain_file = APPS_DIR + "/pddl_files/domain.pddl"
+    commands = ['optic-cplex',
+                domain_file,
+                problem_file]
+    proc = subprocess.Popen(commands, stdout=subprocess.PIPE)
+    time.sleep(sleep_for)
+    proc.terminate()
+    text = proc.stdout.read().decode("UTF-8")
+    print(freeze_output_file(itinerary_slug,text))
+    pprint.pprint(text)
+    return text
+
+def freeze_output_file(itinerary_slug, text):
+    """ This methods saves the output from the planner into a
+    file inside the outputs folder. That way we can test if something went
+    wrong or if the plan wasn't as accurate as we would wanted it to be.
+    """
+    file_name = "itinerary-{}.txt".format(itinerary_slug)
+    file_loc = APPS_DIR+"/pddl_files/outputs/"
+    pddl_file = open(file_loc+file_name,'w')
+    pddl_file.write(text)
+    pddl_file.close()
+    return file_name
