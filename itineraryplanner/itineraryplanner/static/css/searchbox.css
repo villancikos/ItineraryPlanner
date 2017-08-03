@@ -54,3 +54,17 @@
 .iw_table_icon {
   text-align: right;
 }
+#searchedPlaces ul li {
+  background-color: #ffffff;
+}
+#searchedPlaces ul li:hover{
+  background-color: #e7e7e7;
+  -webkit-transition: background-color 250ms linear;
+  -ms-transition: background-color 250ms linear;
+  transition: background-color 250ms linear;
+  cursor: pointer;
+}
+
+#searchedPlaces ul li:active {
+    background-color: #607d8b;
+}

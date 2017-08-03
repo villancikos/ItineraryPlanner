@@ -21,8 +21,8 @@
                 <input id="pac-input" class="controls noEnterSubmit" type="text" placeholder="Search Box">
                 <form id="placesSelectedForm" method="POST" action="{% url 'itineraries:itineraryPicker' %}">
                     {% csrf_token %} {% comment %}<input type="hidden" name="" value="" />{% endcomment %}
-                    <input id="id_placesToVisit" type="hidden" name="placesToVisit" value="" />
-                    <input id="id_distanceMx" type="hidden" name="distanceMx" value="shit" />
+                    <input id="id_placesToVisit" type="hidden" name="placesToVisit" />
+                    <input id="id_distanceMx" type="hidden" name="distanceMx" />
                     <button id="submitPlaceSelection" type="submit">Submit</button>
                     <button id="clearPlaces" type="button">Clear</button>
                 </form>
@@ -70,7 +70,6 @@
     {% comment %}
     <script type="text/javascript" src="{% static 'js/itineraryPicker.js' %}"></script>{% endcomment %}
     <script>
-        var ferTestList = [];
         var successURL = "{{success_url}}";
         var distanceMatrix = [];
         var mapInitialLocation = {
@@ -80,6 +79,7 @@
         var map, placesService, infoWindow;
         var markers = [];
         var placesSelected = [];
+        var idOfPlacesSelected = [];
         // this list holds the complete google response after search (place object)
         var googleSearchedPlaces = [];
         var hostnameRegexp = new RegExp('^https?://.+?/');
@@ -114,41 +114,46 @@
         });
         // Listen for the event fired when the user selects a prediction and retrieve
         // more details for that place.
+        // FILTERING!!! https://stackoverflow.com/questions/35873804/using-google-places-searchbox-to-retrieve-only-address-results
         searchBox.addListener("places_changed", function () {
+            // we just want one place or at least the first one.
             var places = searchBox.getPlaces();
+            // TODO: HACK to only get the first one. IS NOT PERFECT I KNOW.
+            var place = places[0];
             if (places.length == 0) {
                 return;
             }
             // For each place, get the icon, name and location.
             var bounds = new google.maps.LatLngBounds();
-            places.forEach(function (place) {
-                //console.log("places",place);
-                ferTestList.push(place);
+            console.log(place);
+            //places.forEach(function (place) {
                 if (!place.geometry) {
                     console.log("Returned place contains no geometry");
                     return;
                 }
-                googleSearchedPlaces.push("place_id:"+place.place_id);
-                placesSelected.push(place.geometry.location);
-                populateMarkers(place);
-                if (place.geometry.viewport) {
-                    // Only geocodes have viewport.
-                    bounds.union(place.geometry.viewport);
-                } else {
-                    bounds.extend(place.geometry.location);
+                // debugger;
+                if (jQuery.inArray(place.place_id,idOfPlacesSelected) === -1){
+                    googleSearchedPlaces.push("place_id:"+place.place_id);
+                    placesSelected.push(place);
+                    idOfPlacesSelected.push(place.place_id);
+                    populateMarkers(place);
+                    if (place.geometry.viewport) {
+                        // Only geocodes have viewport.
+                        bounds.union(place.geometry.viewport);
+                    } else {
+                        bounds.extend(place.geometry.location);
+                    }
+                    map.fitBounds(bounds);
                 }
-            });
-            map.fitBounds(bounds);
+                else{
+                    alert("It appears you already selected that place.\nTry a new one");
+                    $('#pac-input').val(" ");
+                    $('#pac-input').focus();
+                }
+            //});
         });
-        function callbackFunction(response, status) {
-            if (status !== 'OK') {
-                console.log('Error was: ' + status);
-            } else {
-                distanceMatrix = response.rows;
-                console.log("TheResponse:", response.rows);
-            }
-        };
 
+        // We no longer use this function because we delegate it to the Back End.
         function distanceMatrixCall() {
             var computedDistances = [];
             var gs = new google.maps.DistanceMatrixService;
@@ -315,15 +320,16 @@
             }
         }
         function addSelectedPlaceToSidebar(googlePlaceMarker) {
-            // if the place already exists in our list ignore
-            var searchedPlaces = document.getElementById('searchedPlaces');
-            if (!searchedPlaces.children.length) {
-                var ul = document.createElement('ul');
-                ul.className = 'list-group';
-                var beChecked = true;
+            // Function to add places to the sidebar.
+            var $searchedPlaces = $('#searchedPlaces');
+            // only create the UL if it doesn't exist already.            
+            if ($('#searchedPlaces ul').length == 0){
+                var $ul = $('<ul>').addClass('list-group');
+                // beChecked used to default Initial Place (hotel)
+                var beChecked = true; 
             }
-            else {
-                var ul = searchedPlaces.children[0];
+            else{
+                var $ul = $('#searchedPlaces ul');
                 var beChecked = false;
             }
             var $name = googlePlaceMarker.title;
@@ -331,10 +337,10 @@
                 var picture = googlePlaceMarker.placeResult.photos[0].getUrl({'maxWidth':80,'maxHeight':80})
             }
             else{
+                // TODO: Change placeholder to a local image to avoid API Calls.
                 var picture = 'https://dummyimage.com/80x80/000/ffffff&text=No+Picture';
             }
-            var $img = $('<img>'); //Equivalent: $(document.createElement('img'))
-            $img.prop('src', picture);
+            var $img = $('<img>').prop('src', picture); 
             var openingTimes = getPlaceOpeningTimes(googlePlaceMarker.placeResult);
             googlePlaceMarker.openingTimes = openingTimes;
             var $li = $('<li>').addClass('list-group-item');
@@ -357,11 +363,8 @@
                 google.maps.event.trigger(googlePlaceMarker, 'click');
                 console.log("jquery clicked");
             });
-            // li.onclick = function() {
-            //   google.maps.event.trigger(marker, "click");
-            // };
-            $li.appendTo(ul);
-            searchedPlaces.appendChild(ul);
+            $li.appendTo($ul);
+            $searchedPlaces.append($ul);
         }
 
         // Get the place details for a hotel. Show the information in an info window,
@@ -451,13 +454,6 @@
             google.maps.event.addListener(googlePlaceMarker, "click", showInfoWindow);
             // Push the entire marker to the markers dict.
             markers.push(googlePlaceMarker);
-            //var json_markers = markers.map(function (place) {
-            //    //return jsonifyPlace(place);
-            //    return make_json_marker(place);
-            //});
-            //console.log(json_markers);
-            //$('#id_placesToVisit').val(json_markers);
-            //addPlaceToList(place);
             addSelectedPlaceToSidebar(googlePlaceMarker);
         }
 
@@ -470,6 +466,7 @@
             markers = [];
             placesSelected = [];
             googleSearchedPlaces = [];
+            idOfPlacesSelected = [];
             $('#id_placesToVisit').val('');
             $('#id_distanceMx').val('');
             $('#searchedPlaces ul').empty();
