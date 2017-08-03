@@ -39,16 +39,11 @@
   border-color: #4d90fe;
 }
 
-.hotelIcon {
+.placeIcon {
   width: 24px;
   height: 24px;
 }
 
-.placeIcon {
-  width: 20px;
-  height: 34px;
-  margin: 4px;
-}
 .iw_table_row {
   height: 18px;
 }

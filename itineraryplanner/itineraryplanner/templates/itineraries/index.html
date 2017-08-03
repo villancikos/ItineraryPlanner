@@ -11,13 +11,14 @@
     <link href="{% static 'css/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
     <link href="{% static 'css/style.css' %}" rel="stylesheet">
     <link href="{% static 'css/searchbox.css' %}" rel="stylesheet">
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
 </head>
 
 <body>
     <div class="container-fluid wrapper">
         <div class="row">
             <div id="places" class="col-lg-4 d-flex flex-column p-0">
-                <input id="pac-input" class="controls" type="text" placeholder="Search Box">
+                <input id="pac-input" class="controls noEnterSubmit" type="text" placeholder="Search Box">
                 <form id="placesSelectedForm" method="POST" action="{% url 'itineraries:itineraryPicker' %}">
                     {% csrf_token %} {% comment %}<input type="hidden" name="" value="" />{% endcomment %}
                     <input id="id_placesToVisit" type="hidden" name="placesToVisit" value="" />
@@ -99,9 +100,13 @@
         });
         // init placesService instance 
         placesService = new google.maps.places.PlacesService(map);
+        var defaultBounds = new google.maps.LatLngBounds(
+            new google.maps.LatLng(51.242047, -0.568342), // southWest (Guildford)
+            new google.maps.LatLng(51.712468, 0.238466) // northEast (Chipping Ongard)
+        );
         // Create the search box and link it to the UI element.
         var input = document.getElementById("pac-input");
-        var searchBox = new google.maps.places.SearchBox(input);
+        var searchBox = new google.maps.places.SearchBox(input, {bounds: defaultBounds});
         map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
         // Bias the SearchBox results towards current map's viewport.
         map.addListener("bounds_changed", function () {
@@ -264,17 +269,17 @@
         $('#clearPlaces').on('click', function (e) { clearOldMarkers(); });
 
         function make_json_marker(marker) {
-            let openingTimes = getPlaceOpeningTimes(marker.placeResult);
-            let opens = openingTimes.opens;
-            let closes = openingTimes.closes;
+            //let openingTimes = getPlaceOpeningTimes(marker.placeResult);
+            //let opens = openingTimes.opens;
+            //let closes = openingTimes.closes;
             let $marker_obj = {
                 "place_id": marker.placeResult.place_id,
                 "is_hotel": false,
                 "name": marker.placeResult.name,
                 "lat": marker.position.lat(),
                 "lng": marker.position.lng(),
-                "opens" : opens,
-                "closes": closes
+                "opens" : marker.openingTimes.opens,
+                "closes": marker.openingTimes.closes
             }
             console.log($marker_obj);
             //return JSON.stringify($marker_obj, null, 4);
@@ -291,15 +296,17 @@
             let opens = null;
             let closes = null;            
             if (has_opening_hours) {
-                if (placeResult.opening_hours.periods.length === 1) {
-                    // it opens 24 hours. Therefore not closing.
-                    if (!placeResult.opening_hours.periods[0].hasOwnProperty('close')) {
-                        opens = '0000'
+                if (placeResult.opening_hours.hasOwnProperty('periods')){
+                    if (placeResult.opening_hours.periods.length === 1) {
+                        // it opens 24 hours. Therefore not closing.
+                        if (!placeResult.opening_hours.periods[0].hasOwnProperty('close')) {
+                            opens = '0000'
+                        }
                     }
-                }
-                else {
-                    opens = placeResult.opening_hours.periods[today].open.time;
-                    closes = placeResult.opening_hours.periods[today].close.time;
+                    else {
+                        opens = placeResult.opening_hours.periods[today].open.time;
+                        closes = placeResult.opening_hours.periods[today].close.time;
+                    }
                 }
             }
             return {
@@ -313,18 +320,29 @@
             if (!searchedPlaces.children.length) {
                 var ul = document.createElement('ul');
                 ul.className = 'list-group';
+                var beChecked = true;
             }
             else {
                 var ul = searchedPlaces.children[0];
+                var beChecked = false;
             }
-            var name = document.createTextNode(googlePlaceMarker.title);
-            console.log(googlePlaceMarker.placeResult.name);
+            var $name = googlePlaceMarker.title;
+            if (googlePlaceMarker.placeResult.photos){
+                var picture = googlePlaceMarker.placeResult.photos[0].getUrl({'maxWidth':80,'maxHeight':80})
+            }
+            else{
+                var picture = 'https://dummyimage.com/80x80/000/ffffff&text=No+Picture';
+            }
+            var $img = $('<img>'); //Equivalent: $(document.createElement('img'))
+            $img.prop('src', picture);
             var openingTimes = getPlaceOpeningTimes(googlePlaceMarker.placeResult);
-            console.log(openingTimes.opens);
-            console.log(openingTimes.closes);
-            var li = document.createElement('li');
-            li.className = 'list-group-item';
-            li.appendChild(name);
+            googlePlaceMarker.openingTimes = openingTimes;
+            var $li = $('<li>').addClass('list-group-item');
+            $img.appendTo($li);
+            $li.append($name);
+            // creating the input to Start in this location (i.e. hotel)
+            var $startHere = $('<input>', {type:'checkbox', name:'startHere'}).prop('checked',beChecked);
+            $startHere.appendTo($li);
             // inserting click event to display on map
             // var marker = new google.maps.Marker({
             //     position: { 
@@ -335,16 +353,14 @@
             // marker.placeResult = googlePlace;
             // google.maps.event.addListener(marker, "click", showInfoWindow);
             // setTimeout(dropMarker(marker))
-
-            li.addEventListener('click', function () {
+            $li.on("click", function() {
                 google.maps.event.trigger(googlePlaceMarker, 'click');
-                console.log("clicked");
-            }, false);
-
+                console.log("jquery clicked");
+            });
             // li.onclick = function() {
             //   google.maps.event.trigger(marker, "click");
             // };
-            ul.appendChild(li);
+            $li.appendTo(ul);
             searchedPlaces.appendChild(ul);
         }
 
@@ -362,11 +378,10 @@
                 });
         }
 
-
         // Load the place information into the HTML elements used by the info window.
         function buildIWContent(place) {
             document.getElementById("iw-icon").innerHTML =
-                '<img class="hotelIcon" ' + 'src="' + place.icon + '"/>';
+                '<img class="placeIcon" ' + 'src="' + place.icon + '"/>';
             document.getElementById("iw-url").innerHTML =
                 '<b><a href="' + place.url + '">' + place.name + "</a></b>";
             document.getElementById("iw-address").textContent = place.vicinity;
@@ -462,6 +477,9 @@
             $('#pac-input').focus();
 
         }
+        $('.noEnterSubmit').keypress(function(e){
+            if (e.which == 13) e.preventDefault();
+        });
     </script>
 </body>
 
