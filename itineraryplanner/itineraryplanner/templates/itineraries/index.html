@@ -201,12 +201,10 @@
                 var toSubmitJsonList = JSON.stringify(toSubmitList);
                 //var toSubmitJsonMatrix = JSON.stringify(computedDistances);
                 //console.log(toSubmitJsonMatrix);
-                var $myForm = $('form #placesSelectedForm').serialize();
-                console.log($myForm);
                 $.ajax({
                     type: "POST",
                     url: successURL,
-                    data: { placesToVisit: toSubmitJsonList , preferences: $myForm},
+                    data: { placesToVisit: toSubmitJsonList},
                     success: function (json) {
                         // What we receive from success on server side.
                         console.log("success!");
@@ -224,7 +222,8 @@
 
         // Listener for the submit inside the sidebar list with selectedPlaces.
         $('#placesSelectedForm').on('submit', function (e) {
-            console.log($(this).serialize());
+            $myForm = JSON.stringify($(this).serializeArray());
+            console.log($myForm);
             e.preventDefault();
             $("#submitPlaceSelection").attr("disabled", true);
             if (markers.length <= 1) {
@@ -258,7 +257,7 @@
             $.ajax({
                 type: "POST",
                 url: successURL,
-                data: { placesToVisit: toSubmitJsonList },
+                data: { placesToVisit: toSubmitJsonList, preferences: $myForm },
                 success: function (json) {
                     // What we receive from success on server side.
                     console.log("success!");

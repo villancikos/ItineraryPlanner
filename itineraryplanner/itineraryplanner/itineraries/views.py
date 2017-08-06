@@ -19,7 +19,10 @@ from .forms import PlacesOfInterestForm
 from .models import Itinerary, ItineraryStep, PlaceOfInterest, Preferences
 from ..utils.helpers import create_pddl_problem, write_pddl_file,run_subprocess,convert_plan
 
-gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
+#gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
+gmaps = googlemaps.Client(key='AIzaSyAxJ5w-FZlmrRB6VGyQdD2U18Oqr0QTLxs')
+
+
 
 
 class PlacesOfInterestView(FormView):
@@ -64,12 +67,15 @@ class PlacesOfInterestView(FormView):
         return super(PlacesOfInterestView, self).form_invalid(form)
 
     def form_valid(self, form):
+        #import ipdb;ipdb.set_trace()
         response = super(PlacesOfInterestView, self).form_valid(form)
         # This method is called when valid form data has been POSTed.
         # It should return an HttpResponse.
 
         #places_to_visit_json = form.cleaned_data['placesToVisit']
         places_to_visit = json.loads(form.cleaned_data['placesToVisit'])
+        preferences = json.loads(form.cleaned_data['preferences'])
+        print(preferences)
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
         created_places = []
@@ -166,6 +172,7 @@ class PlacesOfInterestView(FormView):
                 #     print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
 
         all_distances = itinerary.get_distance_matrix_places_format()
+        import pdb;pdb.set_trace() 
         dmx = gmaps.distance_matrix(
             origins=all_distances,
             destinations=all_distances,
