@@ -223,7 +223,8 @@
         };
 
         // Listener for the submit inside the sidebar list with selectedPlaces.
-        $('#submitPlaceSelection').on('click', function (e) {
+        $('#placesSelectedForm').on('submit', function (e) {
+            console.log($(this).serialize());
             e.preventDefault();
             $("#submitPlaceSelection").attr("disabled", true);
             if (markers.length <= 1) {
@@ -335,6 +336,7 @@
                 var beChecked = false;
             }
             var $name = googlePlaceMarker.title;
+            var $place_id = googlePlaceMarker.placeResult.place_id;
             if (googlePlaceMarker.placeResult.photos) {
                 var picture = googlePlaceMarker.placeResult.photos[0].getUrl({ 'maxWidth': 120, 'maxHeight': 120 })
             }
@@ -343,21 +345,28 @@
                 var picture = 'https://dummyimage.com/80x80/000/ffffff&text=No+Picture';
             }
 
-            var $imgDiv = $('<div>').addClass('align-self-center p-2');
-            var $img = $('<img>').prop('src', picture);
-            $imgDiv.append($img);
+            //var $imgDiv = $('<div>').addClass('align-self-center p-2');
+            //var $img = $('<img>').prop('src', picture);
+            //$imgDiv.append($img);
 
             var $optionsDiv = $('<div>').addClass('d-flex flex-column');
-            var $placeTitleDiv = $('p').text($name).removeClass();
+            var $placeTitleDiv = $('<p>').text($name).removeClass();
             var $flexRow = $('<div>').addClass('flex-row');
             var $priorityLikeInputs = $('<div>').addClass('d-flex align-items-baseline');
             var $secondOptionsDiv = $('<div>').addClass('d-flex');
             var $startEndInputsDiv = $('<div>').addClass('p-1');
             var $labelForStartAt = $('<label for="startAt">Start-at:</label>');
-            var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt' });
             var $labelForEndAt = $('<label for="endAt">End-At</label>');
-            var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt' });
+            if (beChecked){
+                var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt', checked: beChecked});
+                var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt',checked: beChecked });            
+            }
+            else{
+                var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt'});
+                var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt' });
+            }
             $optionsDiv.append($placeTitleDiv);
+            $optionsDiv.append('<input name="place_id" type="hidden" value="'+$place_id+'">');
             $secondOptionsDiv.append($startEndInputsDiv)
                 .append($labelForStartAt)
                 .append($inputForStartAt)
@@ -395,18 +404,18 @@
                     value: 3,
                     text: "Must Visit!!!"
                 })
-                );
+                ).prop('required', true);
             var $likeLabel = $('<label for="visit-for">Time to Spend</label>')
-            var $visitForInput = $('<input>', { type: 'number', name: 'visit-for' })
-                .addClass('align-self-start rounded mx-1');
-
+            var $visitForInput = $('<input>', { type: 'number', name: 'visit-for', value: '30' })
+                .addClass('align-self-start rounded mx-1')
+                .prop('required', true);
             $priorityLikeInputs.append($priorityLabel).append($prioritySelectorInput);
             $priorityLikeInputs.append($likeLabel).append($visitForInput);
             $optionsDiv.append($priorityLikeInputs);
             var openingTimes = getPlaceOpeningTimes(googlePlaceMarker.placeResult);
             googlePlaceMarker.openingTimes = openingTimes;
             var $li = $('<li>').addClass('list-group-item d-flex');
-            $li.append($imgDiv);
+            //$li.append($imgDiv);
             $li.append($optionsDiv);
             $li.append($secondOptionsDiv);
             //$li.append($name);
