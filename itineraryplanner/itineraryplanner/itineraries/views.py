@@ -75,16 +75,16 @@ class PlacesOfInterestView(FormView):
         created_places = []
         for place in places_to_visit:
             # To DEBUG remove comments
-            print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}.\
-            \n Opens at:{5} and Closes at:{6}  ".format(
-                place['place_id'],
-                place['is_hotel'],
-                place['name'],
-                place['lat'],
-                place['lng'],
-                place['opens'],
-                place['closes']
-            ))
+            # print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}.\
+            # \n Opens at:{5} and Closes at:{6}  ".format(
+            #     place['place_id'],
+            #     place['is_hotel'],
+            #     place['name'],
+            #     place['lat'],
+            #     place['lng'],
+            #     place['opens'],
+            #     place['closes']
+            # ))
             # we first try update the place in case it exists.
             # otherwise we just create it and carry on with the
             # relations with other Models in the database
@@ -124,6 +124,7 @@ class PlacesOfInterestView(FormView):
                 place=place,
                 visitFor=randrange(30, 90)
             )
+        # TODO: Fix this as it runs more than needed.
         # Traverse all the possible origins
         for origin in places_to_visit:
             # Traverse all the possible destinations
@@ -131,8 +132,8 @@ class PlacesOfInterestView(FormView):
                 # for each destination check that is not the same as origin
                 # then save the object as an Itinerary Step and compute duration of trip
                 if destination != origin:
-                    origin_poi = PlaceOfInterest.objects.filter(place_id=origin['place_id']).get()
-                    destination_poi = PlaceOfInterest.objects.filter(place_id=destination['place_id']).get()
+                    origin_poi = PlaceOfInterest.objects.get(place_id=origin['place_id'])
+                    destination_poi = PlaceOfInterest.objects.get(place_id=destination['place_id'])
                     it_step = ItineraryStep.objects.create(
                         origin=origin_poi,
                         destination=destination_poi,
@@ -140,12 +141,14 @@ class PlacesOfInterestView(FormView):
                         # TODO: each transportation Method from Google api (driving, walking, bicycling, transit)
                         method=ItineraryStep.METHOD_CHOICES.WALK
                     )
+                    '''
                     dmx = gmaps.distance_matrix(
                         origins='place_id:{}'.format(origin['place_id']),
                         destinations='place_id:{}'.format(destination['place_id']),
                         mode="walking",
                         language="english"
                     )
+                    '''
                     # Testing using different mode (transit)
                     # dmy = gmaps.distance_matrix(
                     #     origins='place_id:{}'.format(origin['place_id']),
@@ -153,40 +156,60 @@ class PlacesOfInterestView(FormView):
                     #     mode='transit',
                     #     language="english")
                     # print(dmy)
-                    duration = dmx['rows'][0]['elements'][0]['duration']['value']
-
-                    it_step.duration = duration
-                    it_step.save()
+                    #duration = dmx['rows'][0]['elements'][0]['duration']['value']
+                    #duration = 10
+                    #it_step.duration = duration
+                    #it_step.save()
 
                 # To DEBUG remove comments
                 # else:
                 #     print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
 
+        all_distances = itinerary.get_distance_matrix_places_format()
+        dmx = gmaps.distance_matrix(
+            origins=all_distances,
+            destinations=all_distances,
+            mode='walking',
+            language='english'
+        )
+        for outer in enumerate(all_distances):
+            for inner in enumerate(all_distances):
+                if not outer[1] == inner[1]:
+                    it_step = ItineraryStep.objects.get(itinerary=itinerary,origin__place_id=outer[1][9:],destination__place_id=inner[1][9:])
+                    it_step.duration = dmx['rows'][outer[0]]['elements'][inner[0]]['duration']['value']
+                    it_step.save()
+                    #print("FROM ", outer[1][9:]," TO ",inner[1][9:])
+                    #print(dmx['rows'][outer[0]]['elements'][inner[0]]['duration']['value'])
         # one liner to print steps just to verify
-        [print(step) for step in itinerary.steps.all()]
+        # [print(step) for step in itinerary.steps.all()]
         # create the string that will be embeded in the problem file.
-        file_contents = create_pddl_problem(itinerary)
+        file_contents = create_pddl_problem(itinerary,output_plan=False)
         file_name = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
         # add contents to file.
         write_pddl_file(file_contents, file_name)
-        plan = run_subprocess(itinerary.slug,sleep_for=5)
         try: 
+            plan = run_subprocess(itinerary.slug,sleep_for=0)
             plan_dict = convert_plan(plan)
         except TypeError:
             data = {
                 'message':'An error occurred whilst running the itinerary.'
             }
             return JsonResponse(data, status=400)
-        for index in range(len(plan_dict)):
+        except:
+            data = {
+                'message':'The server didn\'t come up with a feasible plan, sorry!'
+            }
+            return JsonResponse(data, status=400)
+        for index in enumerate(plan_dict):
             current_step_qs = itinerary.steps.all().filter(
-                origin__slug=plan_dict[index]['from']
+                origin__slug=plan_dict[index[0]]['from']
             ).filter(
-                destination__slug=plan_dict[index]['to']
+                destination__slug=plan_dict[index[0]]['to']
             ).get()
             # ).filter(
             #     method=ItineraryStep.METHOD_CHOICES[plan_dict[]]
             # ).get()
-            current_step_qs.index = plan_dict[index]['index']
+            current_step_qs.index = plan_dict[index[0]]['index']
             current_step_qs.save()
             print(current_step_qs.index,":",current_step_qs.origin,"->",current_step_qs.destination,":",current_step_qs.method)
         # NEXT STEPS:::::::::::::::::::::::::::::

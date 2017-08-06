@@ -18,6 +18,5 @@ ipdb==0.10.3
 pytest-django==3.1.2
 pytest-sugar==0.8.0
 
-# Google Maps
-googlemaps==2.5.1
+# Pylint to develop better python.
 pylint==1.7.2

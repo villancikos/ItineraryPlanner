@@ -65,3 +65,97 @@
     }
   ]
 }
+
+
+[
+  {
+    "place_id": "ChIJj3swFNIEdkgRi3YRrdJH0ao",
+    "is_hotel": false,
+    "name": "Leicester Square",
+    "lat": 51.5105977,
+    "lng": -0.1295989999999847,
+    "opens": null,
+    "closes": null
+  },
+  {
+    "place_id": "ChIJSYaiciEFdkgRn9fHtOCmkdM",
+    "is_hotel": false,
+    "name": "Waterstones London - Piccadilly",
+    "lat": 51.509125,
+    "lng": -0.13604799999995976,
+    "opens": "1200",
+    "closes": "1830"
+  },
+  {
+    "place_id": "ChIJuc9sjNIEdkgR0--FnyYzDsg",
+    "is_hotel": false,
+    "name": "Slug and Lettuce",
+    "lat": 51.511266,
+    "lng": -0.13143300000001545,
+    "opens": "1100",
+    "closes": "2230"
+  },
+  {
+    "place_id": "ChIJDZxGI8wEdkgRBpT3OKG89M0",
+    "is_hotel": false,
+    "name": "Nando's",
+    "lat": 51.5103648,
+    "lng": -0.1244729999999663,
+    "opens": "1130",
+    "closes": "2230"
+  },
+  {
+    "place_id": "ChIJd7dIqkwbdkgRh5nhlEcRzwk",
+    "is_hotel": false,
+    "name": "Maughan Library",
+    "lat": 51.5151827,
+    "lng": -0.111003500000038,
+    "opens": "1000",
+    "closes": "0100"
+  },
+  {
+    "place_id": "EhJTdHJhbmQsIExvbmRvbiwgVUs",
+    "is_hotel": false,
+    "name": "Strand",
+    "lat": 51.5137594,
+    "lng": -0.11152110000000448,
+    "opens": null,
+    "closes": null
+  },
+  {
+    "place_id": "ChIJ2dGMjMMEdkgRqVqkuXQkj7c",
+    "is_hotel": false,
+    "name": "Big Ben",
+    "lat": 51.50072919999999,
+    "lng": -0.12462540000001354,
+    "opens": null,
+    "closes": null
+  },
+  {
+    "place_id": "ChIJAQoi2mcFdkgRhi5pHDcbkTE",
+    "is_hotel": false,
+    "name": "Imperial College London",
+    "lat": 51.49879970000001,
+    "lng": -0.17487719999996898,
+    "opens": null,
+    "closes": null
+  },
+  {
+    "place_id": "ChIJq4lX1doEdkgR5JXPstgQjc0",
+    "is_hotel": false,
+    "name": "Churchill War Rooms",
+    "lat": 51.50221699999999,
+    "lng": -0.12932869999997365,
+    "opens": "0930",
+    "closes": "1900"
+  },
+  {
+    "place_id": "ChIJ-fUL426ue0gRiy9iDeAlpYo",
+    "is_hotel": false,
+    "name": "War Museum",
+    "lat": 53.469296,
+    "lng": -2.299633999999969,
+    "opens": null,
+    "closes": null
+  }
+]

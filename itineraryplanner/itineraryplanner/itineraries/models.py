@@ -131,7 +131,18 @@ class Itinerary(TimeStampedModel):
                 last_place = step.origin
                 places.append(step.origin.slug)
         return places
-
+    
+    def get_distance_matrix_places_format(self):
+        """ This method is used to append the keyword place_id:
+        to each place in the list so we can request a more precise
+        distance matrix from Google Maps API."""
+        places = []
+        last_place = None
+        for step in self.steps.all():
+            if not last_place == step.origin:
+                last_place = step.origin
+                places.append('place_id:{}'.format(step.origin.place_id))
+        return places
 
     def get_all_travel_methods(self):
         """ small helper to get all travel methods 

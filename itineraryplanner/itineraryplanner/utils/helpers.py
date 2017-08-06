@@ -98,7 +98,7 @@ def unique_slugify(instance, value, slug_field_name='slug', queryset=None,
     setattr(instance, slug_field.attname, slug)
 
 
-def create_pddl_problem(itinerary):
+def create_pddl_problem(itinerary,output_plan=False):
     """ Helper function that forms the pddl file of th given itinerary.
     The customization in each pddl file will be created using the
     preferences properties inside the Preference table attached to each
@@ -208,7 +208,9 @@ def create_pddl_problem(itinerary):
     #      paths, traveltimes, visit_for, goals, constraints, metrics)
     file_contents = header + objects + init + times + tourist_starting_location + \
         paths + traveltimes + visit_for + goals + constraints + metrics
-    print(file_contents)
+    # Print the plan in the console if true...
+    if output_plan:
+        print(file_contents)
     return file_contents
 
 
