@@ -261,7 +261,6 @@ def convert_plan(plan):
             starting = move.find("(") + 1
             ending = move.find(")")
             splitter = move[starting:ending].split()
-            # print(splitter)
             instruction_set[counter] = {
                 'method': splitter[-1],
                 'from': splitter[-3],
@@ -280,7 +279,7 @@ def run_subprocess(itinerary_slug, sleep_for=None, domain_file=None):
     """
     if itinerary_slug is None:
         raise IOError
-    if sleep_for is None:
+    if sleep_for is None or sleep_for == 0:
         sleep_for = 2.0
     problem_file = APPS_DIR + "/pddl_files/user_files/itinerary-{}.pddl".format(itinerary_slug)
     if not domain_file:

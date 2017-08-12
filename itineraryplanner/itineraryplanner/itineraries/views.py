@@ -197,7 +197,7 @@ class PlacesOfInterestView(FormView):
         # add contents to file.
         write_pddl_file(file_contents, file_name)
         try: 
-            plan = run_subprocess(itinerary.slug,sleep_for=0)
+            plan = run_subprocess(itinerary.slug,sleep_for=2)
             plan_dict = convert_plan(plan)
         except TypeError:
             data = {
@@ -209,6 +209,7 @@ class PlacesOfInterestView(FormView):
                 'message':'The server didn\'t come up with a feasible plan, sorry!'
             }
             return JsonResponse(data, status=400)
+        #submittable = plan_dict
         for index in enumerate(plan_dict):
             current_step_qs = itinerary.steps.all().filter(
                 origin__slug=plan_dict[index[0]]['from']
@@ -219,22 +220,17 @@ class PlacesOfInterestView(FormView):
             #     method=ItineraryStep.METHOD_CHOICES[plan_dict[]]
             # ).get()
             current_step_qs.index = plan_dict[index[0]]['index']
+            print(current_step_qs.origin.place_id)
+            print(current_step_qs.destination.place_id)
+            plan_dict[index[0]]['fromPlaceId']=current_step_qs.origin.place_id
+            plan_dict[index[0]]['toPlaceId']=current_step_qs.destination.place_id
             current_step_qs.save()
             print(current_step_qs.index,":",current_step_qs.origin,"->",current_step_qs.destination,":",current_step_qs.method)
-        # NEXT STEPS:::::::::::::::::::::::::::::
-        # CREATE PDDL PROBLEM FILE
-        # RUN PROBLEM FILE ON A SUBPROCESS
-        # PARSE RESULT FROM THE TERMINAL
-        # using the following multiline regex: ^\d{1,5}.\d{1,5}: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$
-        # re.compile(r"", re.MULTILINE)
-        # UPDATE THE INDEX ACCORDING TO THE VISIT TIMES
-        # THINK ABOUT WHAT TO DO WITH THE TIME TO SPEND IN EACH LOCATION
-
-        # TODO, create JSON response for the steps.
+        plan_json = json.dumps(plan_dict, ensure_ascii=False)
         if self.request.is_ajax():
             # Request is ajax, send a json response
             data = {
-                'final_plan:': str(plan_dict)
+                'final_plan': plan_json
             }
             return JsonResponse(data, status=200)
         return response

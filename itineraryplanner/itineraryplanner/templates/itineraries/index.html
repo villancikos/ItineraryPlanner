@@ -227,18 +227,19 @@
                     success: function (json) {
                         // What we receive from success on server side.
                         console.log("success!");
-                        console.log(json);
+                        console.log(json.responseJSON);
                         $("#submitPlaceSelection").attr("disabled", false);
                     },
                     error: function (json) {
                         // in case of error we get this from server
                         $("#submitPlaceSelection").attr("disabled", false);
-                        console.log("Was error");
+                        console.log(json.responseJSON);
                     },
                 });
             });
         };
 
+        
         // Listener for the submit inside the sidebar list with selectedPlaces.
         $('#placesSelectedForm').on('submit', function (e) {
             e.preventDefault();
@@ -291,6 +292,7 @@
                     // What we receive from success on server side.
                     console.log("success!");
                     console.log(json);
+                    drawRoute(json);                    
                     $("#submitPlaceSelection").attr("disabled", false);
                 },
                 error: function (json) {
@@ -300,6 +302,64 @@
                 },
             });
         });
+
+        function drawRoute(json){
+            window.directionsService = new google.maps.DirectionsService;
+            calculateAndDisplayRoute(json);
+        }
+        
+        function getRandomColor() {
+            var letters = '0123456789ABCDEF';
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+        function renderDirections(result) {
+            var polylineOptionsActual = new google.maps.Polyline({
+                strokeColor: getRandomColor(),
+                strokeOpacity: 1.0,
+                strokeWeight: 10
+            });
+            var directionsRenderer = new google.maps.DirectionsRenderer({suppressMarkers: true, polylineOptions: polylineOptionsActual});
+            directionsRenderer.setMap(map);
+            directionsRenderer.setDirections(result);
+        }
+        function calculateAndDisplayRoute(json) {
+            planDict = JSON.parse(json['final_plan']);  
+            directions = []; 
+            Object.keys(planDict).forEach(function(key){
+                var fromPlaceId = planDict[key]['fromPlaceId']
+                var toPlaceId =planDict[key]['toPlaceId']
+                var fromLocation = null;
+                var toLocation = null;
+                placesSelected.forEach(function(element){
+                    if (element.place_id === fromPlaceId){
+                        fromLocation = element.geometry.location;
+                    }
+                    if (element.place_id === toPlaceId){
+                        toLocation = element.geometry.location;
+                    }
+                });
+                window.directionsService.route({
+                origin: fromLocation,
+                destination: toLocation,
+                travelMode: 'WALKING'
+                }, function(response, status) {
+                    if (status === 'OK') {
+                        //window.directionsDisplay.setDirections(response);
+                        directions.push(response);                       
+                        renderDirections(response);
+                    } else {
+                        window.alert('Directions request failed due to ' + status);
+                    }
+                });
+                //window.directionsDisplay.setDirections(directions);
+            });
+            
+        }
+  
 
         // Listener for Clear button in case user wants to delete every marker from map
         $('#clearPlaces').on('click', function (e) { clearOldMarkers(); });

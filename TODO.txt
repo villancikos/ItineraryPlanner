@@ -39,6 +39,9 @@ function calculateAndDisplayRoute(directionsService, directionsDisplay) {
       }
 
 calculateAndDisplayRoute(directionsService,directionsDisplay);
+Useful discussion for more renderers...
+https://groups.google.com/forum/#!msg/google-maps-js-api-v3/ubomY2IT728/rlhVo94005UJ
+
 
 Get the subprocess and do console stuff
 https://www.lifewire.com/g00/write-awk-commands-and-scripts-2200573?i10c.referrer=https%3A%2F%2Fwww.google.nl%2F
