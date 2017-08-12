@@ -16,6 +16,9 @@
 </head>
 
 <body>
+    <div id="loadingDiv">
+        <img src="{% static 'images/spinner.svg' %}" onerror="{% static 'images/spinner.gif' %}" alt="loading icon"/>
+    </div>
     <div class="container-fluid wrapper">
         <div class="row leftSidebar">
             <div id="places" class="col-lg-4 p-0">
@@ -71,6 +74,14 @@
     {% comment %}
     <script type="text/javascript" src="{% static 'js/itineraryPicker.js' %}"></script>{% endcomment %}
     <script>
+        var $loading = $('#loadingDiv').hide();
+        $(document)
+            .ajaxStart(function () {
+            $loading.show();
+            })
+            .ajaxStop(function () {
+            $loading.hide();
+            });
         var successURL = "{{success_url}}";
         var distanceMatrix = [];
         var mapInitialLocation = {
