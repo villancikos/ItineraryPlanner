@@ -76,6 +76,8 @@ class PlacesOfInterestView(FormView):
         places_to_visit = json.loads(form.cleaned_data['placesToVisit'])
         preferences = json.loads(form.cleaned_data['preferences'])
         print(preferences)
+        for key,value in preferences.items():
+            print(key, value)
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
         created_places = []

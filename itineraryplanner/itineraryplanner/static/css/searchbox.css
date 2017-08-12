@@ -127,10 +127,10 @@
 .removePlaceBtn a.btn:hover {
   color: #f0000F;
 }
-.startAtInput input{
+.startAtInput{
   margin-left: 3px;
 }
-.endAtInput input{
+.endAtInput{
   margin-left: 10px;
 }
 
