@@ -54,9 +54,22 @@
 .iw_table_icon {
   text-align: right;
 }
+
 #searchedPlaces ul li {
   background-color: #ffffff;
+  padding: 25px 10px;
+  margin-top:1px;
+  -webkit-box-shadow: 0px 2px 4px 1px rgba(0,0,0,0.35);
+  -moz-box-shadow: 0px 2px 4px 1px rgba(0,0,0,0.35);
+  box-shadow: 0px 2px 4px 1px rgba(0,0,0,0.35);
 }
+
+#searchedPlaces ul li p{
+  -webkit-box-shadow: 0 4px 6px -6px #222;
+  -moz-box-shadow: 0 4px 6px -6px #222;
+  box-shadow: 0 4px 6px -6px #222;
+}
+
 #searchedPlaces ul li:hover{
   background-color: #e7e7e7;
   -webkit-transition: background-color 250ms linear;
@@ -66,5 +79,19 @@
 }
 
 #searchedPlaces ul li:active {
-    background-color: #607d8b;
+  background-color: #607d8b;
+}
+
+.removePlaceBtn a.btn {
+  color: #f00000;
+}
+
+.removePlaceBtn a.btn:hover {
+  color: #a8a8a8;
+}
+.startAtInput input{
+  margin-left: 3px;
+}
+.endAtInput input{
+  margin-left: 10px;
 }

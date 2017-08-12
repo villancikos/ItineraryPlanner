@@ -17,8 +17,8 @@
 
 <body>
     <div class="container-fluid wrapper">
-        <div class="row">
-            <div id="places" class="col-lg-4 d-flex flex-column p-0">
+        <div class="row leftSidebar">
+            <div id="places" class="col-lg-4 p-0">
                 <input id="pac-input" class="controls noEnterSubmit" type="text" placeholder="Search Box">
                 <form id="placesSelectedForm" method="POST" action="{% url 'itineraries:itineraryPicker' %}">
                     {% csrf_token %} {% comment %}<input type="hidden" name="" value="" />{% endcomment %}
@@ -119,9 +119,10 @@
         searchBox.addListener("places_changed", function () {
             // we just want one place or at least the first one.
             var places = searchBox.getPlaces();
+
             // TODO: HACK to only get the first one. IS NOT PERFECT I KNOW.
             var place = places[0];
-            if (places.length == 0) {
+            if (places.length === 0) {
                 return;
             }
             // For each place, get the icon, name and location.
@@ -151,6 +152,7 @@
                 $('#pac-input').focus();
             }
             //});
+            $('#pac-input').val("");
         });
 
         // We no longer use this function because we delegate it to the Back End.
@@ -223,6 +225,10 @@
         // Listener for the submit inside the sidebar list with selectedPlaces.
         $('#placesSelectedForm').on('submit', function (e) {
             $myForm = JSON.stringify($(this).serializeArray());
+            // TODO: Make it better.
+            $( "#searchedPlaces ul" ).children().each(function(){ 
+                console.log($(this).data());
+            });
             console.log($myForm);
             e.preventDefault();
             $("#submitPlaceSelection").attr("disabled", true);
@@ -276,17 +282,17 @@
         $('#clearPlaces').on('click', function (e) { clearOldMarkers(); });
 
         function make_json_marker(marker) {
-            //let openingTimes = getPlaceOpeningTimes(marker.placeResult);
-            //let opens = openingTimes.opens;
-            //let closes = openingTimes.closes;
+            let openingTimes = getPlaceOpeningTimes(marker.placeResult);
+            let opens = openingTimes.opens;
+            let closes = openingTimes.closes;
             let $marker_obj = {
                 "place_id": marker.placeResult.place_id,
                 "is_hotel": false,
                 "name": marker.placeResult.name,
                 "lat": marker.position.lat(),
                 "lng": marker.position.lng(),
-                "opens": marker.openingTimes.opens,
-                "closes": marker.openingTimes.closes
+                "opens": opens,
+                "closes": closes
             }
             console.log($marker_obj);
             //return JSON.stringify($marker_obj, null, 4);
@@ -310,9 +316,14 @@
                             opens = '0000'
                         }
                     }
-                    else {
+                    else if (placeResult.opening_hours.periods.length > today) {
                         opens = placeResult.opening_hours.periods[today].open.time;
                         closes = placeResult.opening_hours.periods[today].close.time;
+                    }
+                    // This else only occurs if one of the days is a Festivity or similar.
+                    else{
+                        opens = placeResult.opening_hours.periods[0].open.time;
+                        closes = placeResult.opening_hours.periods[0].close.time;
                     }
                 }
             }
@@ -325,7 +336,7 @@
             // Function to add places to the sidebar.
             var $searchedPlaces = $('#searchedPlaces');
             // only create the UL if it doesn't exist already.            
-            if ($('#searchedPlaces ul').length == 0) {
+            if ($('#searchedPlaces ul').length === 0) {
                 var $ul = $('<ul>').addClass('list-group');
                 // beChecked used to default Initial Place (hotel)
                 var beChecked = true;
@@ -348,9 +359,100 @@
             //var $img = $('<img>').prop('src', picture);
             //$imgDiv.append($img);
 
+            var $liWrapper = $('<li data-place_id='+$place_id+'>').addClass('placeItem container');
+            var $placeRow = $('<div>').addClass('row');
+            var $titleDiv = $('<div>').addClass('col-10');
+            var $titleElement = $('<p>').text($name);
+            $titleDiv.append($titleElement);
+            var $removePlaceButton = $('<div class="col-2 removePlaceBtn"><a class="btn" href="#" data-place_id="'+$place_id+'"><i class="fa fa-window-close" aria-hidden="true"></i></a></div>');
+            var $priorityDiv = $('<div>').addClass('col-8');
+            var $priorityLabel = $('<label for="priority">Priority</label>');
+            $priorityDiv.append($priorityLabel).append(
+                $('<select>')
+                    .attr('name', 'priority')
+                    .attr('id', 'priority')
+                    .addClass('mx-2')
+                    .append(
+                    $('<option>', {
+                        value: 0,
+                        text: "Visit if Possible"
+                    }))
+                    .append(
+                    $('<option>', {
+                        value: 1,
+                        text: "Like to Visit"
+                    }))
+                    .append(
+                    $('<option>', {
+                        value: 2,
+                        text: "Should Visit!"
+                    })
+                    )
+                    .append(
+                    $('<option>', {
+                        value: 3,
+                        text: "Must Visit!!!"
+                    })
+                    ).prop('required', true)
+            );
+            if (beChecked){
+                var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt', checked: beChecked});
+                var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt',checked: beChecked });            
+            }
+            else{
+                var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt'});
+                var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt' });
+            }
+            var $startAtDiv = $('<div class="col-4 startAtInput">').append(
+                $('<label for="startAt">Start-at:</label>')
+            ).append(
+                $inputForStartAt
+            );
+            var $endAtDiv = $('<div class="col-4 endAtInput">').append(
+                $('<label for="endAt">End-at:</label>')
+            ).append(
+                $inputForEndAt
+            );
+            var $spendDiv = $('<div class="col-8">').append(
+                $('<label for="visit-for">Spend</label>')
+            ).append(
+                $('<input>', { type: 'number', name: 'visit-for', value: '30' })
+                .addClass('rounded mx-1')
+                .prop('required', true)
+                .prop('width', 5)
+            );
+            $liWrapper.append($placeRow);
+            $placeRow.append(
+                $placeRow
+            ).append(
+                $titleDiv
+            ).append(
+                $removePlaceButton
+            ).append(
+                $priorityDiv
+            ).append(
+                $startAtDiv
+            ).append(
+                $spendDiv    
+            ).append(
+                $endAtDiv
+            );
+            $liWrapper.on("click", function () {
+                google.maps.event.trigger(googlePlaceMarker, 'click');
+            });
+            $ul.append($liWrapper);
+            $searchedPlaces.append($ul);
+            
+            //$removePlaceButton.on('click', clearThisMarker($(this).children().data()));
+            $removePlaceButton.on('click', function(){
+                var placeId = $(this).children().data()['place_id'];
+                console.log(placeId);    
+                clearThisMarker(placeId);
+            });
+            /*
             var $optionsDiv = $('<div>').addClass('d-flex flex-column');
-            var $placeTitleDiv = $('<p>').text($name).removeClass();
-            var $flexRow = $('<div>').addClass('flex-row');
+            var $placeTitleDiv = $('<h5>').text($name).removeClass();
+            var $flexRow = $('<div>').addClass('container');
             var $priorityLikeInputs = $('<div>').addClass('d-flex align-items-baseline');
             var $secondOptionsDiv = $('<div>').addClass('d-flex');
             var $startEndInputsDiv = $('<div>').addClass('p-1');
@@ -366,6 +468,33 @@
             }
             $optionsDiv.append($placeTitleDiv);
             $optionsDiv.append('<input name="place_id" type="hidden" value="'+$place_id+'">');
+            var $prioritySelectorInput = $('<select>')
+                .attr('name', 'priority')
+                .attr('id', 'priority')
+                .addClass('mx-2')
+                .append(
+                $('<option>', {
+                    value: 0,
+                    text: "Visit if Possible"
+                }))
+                .append(
+                $('<option>', {
+                    value: 1,
+                    text: "Like to Visit"
+                }))
+                .append(
+                $('<option>', {
+                    value: 2,
+                    text: "Should Visit!"
+                })
+                )
+                .append(
+                $('<option>', {
+                    value: 3,
+                    text: "Must Visit!!!"
+                })
+                ).prop('required', true);
+            $optionsDiv.append($prioritySelectorInput);
             $secondOptionsDiv.append($startEndInputsDiv)
                 .append($labelForStartAt)
                 .append($inputForStartAt)
@@ -436,6 +565,7 @@
             });
             $li.appendTo($ul);
             $searchedPlaces.append($ul);
+            */
 
         }
 
@@ -546,8 +676,34 @@
             $('#pac-input').focus();
 
         }
+
+        function clearThisMarker(placeId){
+            var indexToRemove = null;
+            markers.forEach( function(marker, index) {
+                if (marker.placeResult.place_id === placeId){
+                    indexToRemove = index;
+                }
+            });
+            //console.log(indexToRemove);
+            // Remove the marker from Markers List
+            markers.splice(indexToRemove, 1);
+            // Remove place from SidebarList.
+            $liToDelete = $('#searchedPlaces ul').find("[data-place_id='"+placeId+"']");
+            $liToDelete.remove();
+            // Remove place from PlacesSelected List
+            var indexToRemovePlaces = null;
+            placesSelected.forEach( function(place, index){
+                if (placesSelected.place_id === placeId){
+                    indexToRemovePlaces = index;
+                }
+            });
+            placesSelected.splice(indexToRemovePlaces,1);
+
+        }
+
+        // Code to prevent user of pressing enter on input to avoid massive searches.
         $('.noEnterSubmit').keypress(function (e) {
-            if (e.which == 13) e.preventDefault();
+            if (e.which === 13) e.preventDefault();
         });
     </script>
 </body>

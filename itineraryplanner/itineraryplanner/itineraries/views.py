@@ -172,13 +172,13 @@ class PlacesOfInterestView(FormView):
                 #     print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
 
         all_distances = itinerary.get_distance_matrix_places_format()
-        import pdb;pdb.set_trace() 
         dmx = gmaps.distance_matrix(
             origins=all_distances,
             destinations=all_distances,
             mode='walking',
             language='english'
         )
+        print("Got distances. {} Elements.\n{}".format(len(dmx),dmx))
         for outer in enumerate(all_distances):
             for inner in enumerate(all_distances):
                 if not outer[1] == inner[1]:
