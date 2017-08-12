@@ -27,8 +27,14 @@
                     {% csrf_token %} {% comment %}<input type="hidden" name="" value="" />{% endcomment %}
                     <input id="id_placesToVisit" type="hidden" name="placesToVisit" />
                     <input id="id_distanceMx" type="hidden" name="distanceMx" />
-                    <button id="submitPlaceSelection" type="submit">Submit</button>
-                    <button id="clearPlaces" type="button">Clear</button>
+                    <div class="row">
+                        <div class="col-6">
+                            <button id="submitPlaceSelection" class="btn-block" type="submit">Submit</button>
+                        </div>
+                        <div class="col-6">
+                            <button id="clearPlaces" class="btn-block" type="button">Remove All</button>
+                        </div>                        
+                    </div>
                     <div id="searchedPlaces">
                     </div>
                 </form>
@@ -305,8 +311,6 @@
                 "opens": opens,
                 "closes": closes
             }
-            console.log($marker_obj);
-            //return JSON.stringify($marker_obj, null, 4);
             return $marker_obj
         }
 
@@ -682,7 +686,7 @@
             idOfPlacesSelected = [];
             $('#id_placesToVisit').val('');
             $('#id_distanceMx').val('');
-            $('#searchedPlaces ul').empty();
+            $('#searchedPlaces ul').remove();
             $('#pac-input').val(" ");
             $('#pac-input').focus();
 
@@ -695,7 +699,7 @@
                     indexToRemove = index;
                 }
             });
-            //console.log(indexToRemove);
+
             // Remove the marker from Markers List
             markers.splice(indexToRemove, 1);
             // Remove place from SidebarList.
@@ -708,7 +712,15 @@
                     indexToRemovePlaces = index;
                 }
             });
+            var indexToRemoveIds = null;
+            idOfPlacesSelected.forEach( function(place, index){
+                if (place === placeId){
+                    indexToRemoveIds = index;
+                }
+            });
+
             placesSelected.splice(indexToRemovePlaces,1);
+            idOfPlacesSelected.splice(indexToRemoveIds,1);
 
         }
 
