@@ -22,9 +22,17 @@
     ?mode - mode)
   :duration (=?duration (traveltime ?mode ?loc-from ?loc-to))
   :condition
-   (and (at start (at ?tourist ?loc-from)) (at start (path ?loc-from ?loc-to))) 
+  (
+    and 
+    (at start (at ?tourist ?loc-from)) 
+    (at start (path ?loc-from ?loc-to))
+  ) 
   :effect
-   (and (at start (not (at ?tourist ?loc-from))) (at end (at ?tourist ?loc-to))))
+  (
+    and 
+    (at start (not (at ?tourist ?loc-from))) 
+    (at end (at ?tourist ?loc-to)))
+  )
 
 (:durative-action VISIT
  :parameters

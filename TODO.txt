@@ -18,6 +18,10 @@ Useful SO question about the precision of the lat and lng
 https://gis.stackexchange.com/questions/8650/measuring-accuracy-of-latitude-and-longitude
 
 
+Usefl link for changing icons to google directions
+http://googlemaps.googlermania.com/google_maps_api_v3/en/map_example_direction_customicon.html
+
+
 CODE TO DRAW PATHS:
 var directionsService = new google.maps.DirectionsService;
 var directionsDisplay = new google.maps.DirectionsRenderer;
@@ -39,8 +43,14 @@ function calculateAndDisplayRoute(directionsService, directionsDisplay) {
       }
 
 calculateAndDisplayRoute(directionsService,directionsDisplay);
-Useful discussion for more renderers...
+Useful google discussion for more renderers...
 https://groups.google.com/forum/#!msg/google-maps-js-api-v3/ubomY2IT728/rlhVo94005UJ
+
+useful stack overflow post for different colors on polylines of maps
+https://stackoverflow.com/questions/9311498/change-the-color-of-the-polyline-in-directionsrenderer
+
+a github project that uses Optic 
+https://github.com/Dunes/janitor/tree/master/optic
 
 
 Get the subprocess and do console stuff

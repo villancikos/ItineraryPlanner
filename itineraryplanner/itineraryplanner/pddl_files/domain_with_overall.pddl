@@ -9,10 +9,14 @@
 		(time ?num - int)
 		(visited ?tourist - tourist ?loc - location)
 	  (path ?x ?y - location)
+    (available ?t - tourist)
 )
 
-(:functions (traveltime ?mode - mode ?loc-from ?loc-to - location)
-	(visitfor ?loc - location ?tourist - tourist))
+(:functions 
+  (traveltime ?mode - mode ?loc-from ?loc-to - location)
+	(visitfor ?loc - location ?tourist - tourist)
+  (bebusyfor ?tourist - tourist ?location - location)
+)
 
 (:durative-action MOVE
   :parameters
@@ -22,11 +26,17 @@
     ?mode - mode)
   :duration (=?duration (traveltime ?mode ?loc-from ?loc-to))
   :condition
-   (and (at start (at ?tourist ?loc-from)) (at start (path ?loc-from ?loc-to))
-   (over all (available ?tourist))) 
-   
+  (and 
+    (at start (at ?tourist ?loc-from)) 
+    (at start (path ?loc-from ?loc-to))
+    (over all (available ?tourist))
+  )
   :effect
-   (and (at start (not (at ?tourist ?loc-from))) (at end (at ?tourist ?loc-to))))
+  (and 
+    (at start (not (at ?tourist ?loc-from))) 
+    (at end (at ?tourist ?loc-to))
+  )
+)
 
 (:durative-action VISIT
  :parameters
@@ -34,8 +44,28 @@
    ?loc - location)
  :duration (=?duration (visitfor ?loc ?tourist))
  :condition
-   (and (over all (at ?tourist ?loc)) (over all (open ?loc)))
+   (and 
+      (over all (at ?tourist ?loc)) 
+      (over all (open ?loc))
+      (over all (available ?tourist))
+   )
  :effect
-   (at end (visited ?tourist ?loc)))
+   (at end (visited ?tourist ?loc))
+)
+
+(:durative-action BEBUSY
+:parameters
+  (?tourist - tourist
+  ?loc- location)
+:duration (=?duration (bebusyfor ?loc ?tourist))
+:condition
+(and 
+  (over all (at ?tourist ?loc))
+  (over all (open ?loc))
+  (over all (available ?tourist))
+  )
+  :effect
+  (at end ())
+)
  
 )

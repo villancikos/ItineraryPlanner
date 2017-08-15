@@ -78,6 +78,7 @@ class PlacesOfInterestView(FormView):
         print(preferences)
         for key,value in preferences.items():
             print(key, value)
+        
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
         created_places = []
