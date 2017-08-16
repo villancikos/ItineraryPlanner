@@ -115,6 +115,8 @@
         // this list holds the complete google response after search (place object)
         var googleSearchedPlaces = [];
         var hostnameRegexp = new RegExp('^https?://.+?/');
+        // global list for directionRenderer
+        directionsRendererList = [];
         //var service = new google.maps.DistanceMatrixService;
         // debugger;
         // var csrftoken = Cookies.get('csrftoken');
@@ -327,6 +329,7 @@
             return color;
         }
         function renderDirections(result) {
+
             var polylineOptionsActual = new google.maps.Polyline({
                 strokeColor: getRandomColor(),
                 strokeOpacity: 0.6,
@@ -336,14 +339,29 @@
             //    directionsRenderer.setMap(null);
             //    directionsRenderer = null;
             //}
-            window.directionsRenderer = new google.maps.DirectionsRenderer({suppressMarkers: true, polylineOptions: polylineOptionsActual});
-            window.directionsRenderer.setMap(map);
-            window.directionsRenderer.setDirections(result);
+            directionsRenderer.push(
+                new google.maps.DirectionsRenderer(
+                    { 
+                        map: map,
+                        suppressMarkers: true, 
+                        polylineOptions: polylineOptionsActual 
+                    }
+                ).setDirections(result)
+            )
+
+            //window.directionsRenderer.setMap(map);
+            //window.directionsRenderer.setDirections(result);
         }
         function drawRoute(json) {
             window.directionsService = new google.maps.DirectionsService;
             planDict = JSON.parse(json['final_plan']);  
             directions = []; 
+            // clear old renderers.
+            directionsRendererList.forEach(function(directionRenderer){
+                directionRenderer.setMap(null);
+                directionRenderer = null;
+            });
+            directionsRendererList=[];
             Object.keys(planDict).forEach(function(key){
                 var fromPlaceId = planDict[key]['fromPlaceId']
                 var toPlaceId =planDict[key]['toPlaceId']
@@ -358,17 +376,35 @@
                     }
                 });
                 window.directionsService.route({
-                origin: fromLocation,
-                destination: toLocation,
-                travelMode: 'WALKING'
-                }, function(response, status) {
-                    if (status === 'OK') {
-                        //window.directionsDisplay.setDirections(response);
-                        directions.push(response);                       
-                        renderDirections(response);
-                    } else {
-                        window.alert('Directions request failed due to ' + status);
-                    }
+                    origin: fromLocation,
+                    destination: toLocation,
+                    travelMode: 'WALKING'
+                    }, function(response, status) {
+                        if (status === 'OK') {
+                            //window.directionsDisplay.setDirections(response);
+                            directions.push(response);  
+                            // create a polyline with random color
+                            var polylineOptionsActual = new google.maps.Polyline({
+                                strokeColor: getRandomColor(),
+                                strokeOpacity: 0.6,
+                                strokeWeight: 4,
+                            });
+                            // for each response create a new renderer object.
+                            var directionRenderer = new google.maps.DirectionsRenderer(
+                                { 
+                                    map: map,
+                                    suppressMarkers: true, 
+                                    polylineOptions: polylineOptionsActual 
+                                }
+                            )
+                            directionRenderer.setDirections(response)
+                            directionsRendererList.push(directionRenderer);
+                            console.log("Here comes the renderer List...........................")                            
+                            console.log(directionsRendererList)
+                            //renderDirections(response);
+                        } else {
+                            window.alert('Directions request failed due to ' + status);
+                        }
                 });
                 //window.directionsDisplay.setDirections(directions);
             });
@@ -772,6 +808,14 @@
             $('#searchedPlaces ul').remove();
             $('#pac-input').val(" ");
             $('#pac-input').focus();
+            // delete also old directions renderers:
+            // clear old renderers.
+            directionsRendererList.forEach(function(directionRenderer){
+                directionRenderer.setMap(null);
+                directionRenderer = null;
+            });
+
+
 
         }
 
