@@ -8,18 +8,20 @@ server to compute the desired TOUR.
 # pylint: disable=E1101
 import json
 import re
-from random import randrange
-
 import googlemaps
 from django.core.urlresolvers import reverse_lazy
 from django.http import HttpResponse, JsonResponse
 from django.views.generic.edit import FormView
 
+from ..utils.helpers import (convert_plan, create_pddl_problem, run_subprocess,
+                             write_pddl_file)
 from .forms import PlacesOfInterestForm
 from .models import Itinerary, ItineraryStep, PlaceOfInterest, Preferences
-from ..utils.helpers import create_pddl_problem, write_pddl_file,run_subprocess,convert_plan
 
-gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
+#gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
+gmaps = googlemaps.Client(key='AIzaSyAxJ5w-FZlmrRB6VGyQdD2U18Oqr0QTLxs')
+
+
 
 
 class PlacesOfInterestView(FormView):
@@ -70,21 +72,41 @@ class PlacesOfInterestView(FormView):
 
         #places_to_visit_json = form.cleaned_data['placesToVisit']
         places_to_visit = json.loads(form.cleaned_data['placesToVisit'])
+        preferences = json.loads(form.cleaned_data['preferences'])
+        properties = {'wakeUpTime':'0800', 
+                        'sleepTime': '2300',
+                        'runFor': '5',
+                       'methods':{
+                           'driving':True,
+                           'walking':True,
+                       } 
+        }
+        # Get the user preferente for running the Plan.
+        # Make sure to get a Valid Int before hand, else parse a 5 second parameter.
+        try:
+            run_plan_for = int(properties['runFor'])
+        except ValueError:
+            run_plan_for = 5
+        awaken_times = {
+            'awaken': properties['wakeUpTime'],
+            'not_awaken': properties['sleepTime']
+        }
+        transporation_methods = properties['methods']
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
         created_places = []
         for place in places_to_visit:
             # To DEBUG remove comments
-            print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}.\
-            \n Opens at:{5} and Closes at:{6}  ".format(
-                place['place_id'],
-                place['is_hotel'],
-                place['name'],
-                place['lat'],
-                place['lng'],
-                place['opens'],
-                place['closes']
-            ))
+            # print("Place with id: {0} and title: {2} \n Coordinates lat:{3},lng:{4}.\
+            # \n Opens at:{5} and Closes at:{6}  ".format(
+            #     place['place_id'],
+            #     place['is_hotel'],
+            #     place['name'],
+            #     place['lat'],
+            #     place['lng'],
+            #     place['opens'],
+            #     place['closes']
+            # ))
             # we first try update the place in case it exists.
             # otherwise we just create it and carry on with the
             # relations with other Models in the database
@@ -112,18 +134,29 @@ class PlacesOfInterestView(FormView):
             # print(obj, ", was created?: ", created)
         # Create an Itinerary Object to hold the tour.
         itinerary = Itinerary()
-        # TODO: Remove this default initial place of interest.
-        # in the near future we want the user to select his desired starting point
-        # e.g. the HOTEL or another initial Place of Interest
-        random_place = created_places[randrange(0, len(created_places))]
-        itinerary.initialPOI = random_place
+        # Initialize start and end at variables to store the itinerary initial and ending
+        start_at = ''
+        end_at = ''
+        # get the mentioned places from the preferences
+        for key,value in preferences.items():
+            if value['startAt']!=False:
+                start_at = value['startAt']
+            if value['endAt']!=False:
+                end_at = value['endAt']
+        # set the initial and ending POI
+        itinerary.initialPOI = PlaceOfInterest.objects.get(place_id=start_at)
+        itinerary.endingPOI = PlaceOfInterest.objects.get(place_id=end_at)
         itinerary.save()
         for place in created_places:
+            visit_for = preferences[place.place_id]['visitFor']
+            priority = preferences[place.place_id]['priority']
             Preferences.objects.create(
                 itinerary=itinerary,
                 place=place,
-                visitFor=randrange(30, 90)
+                visitFor=visit_for,
+                priority=priority,
             )
+        # TODO: Fix this as it runs more than needed.
         # Traverse all the possible origins
         for origin in places_to_visit:
             # Traverse all the possible destinations
@@ -131,78 +164,101 @@ class PlacesOfInterestView(FormView):
                 # for each destination check that is not the same as origin
                 # then save the object as an Itinerary Step and compute duration of trip
                 if destination != origin:
-                    origin_poi = PlaceOfInterest.objects.filter(place_id=origin['place_id']).get()
-                    destination_poi = PlaceOfInterest.objects.filter(place_id=destination['place_id']).get()
-                    it_step = ItineraryStep.objects.create(
-                        origin=origin_poi,
-                        destination=destination_poi,
-                        itinerary=itinerary,
-                        # TODO: each transportation Method from Google api (driving, walking, bicycling, transit)
-                        method=ItineraryStep.METHOD_CHOICES.WALK
-                    )
-                    dmx = gmaps.distance_matrix(
-                        origins='place_id:{}'.format(origin['place_id']),
-                        destinations='place_id:{}'.format(destination['place_id']),
-                        mode="walking",
-                        language="english"
-                    )
-                    # Testing using different mode (transit)
-                    # dmy = gmaps.distance_matrix(
-                    #     origins='place_id:{}'.format(origin['place_id']),
-                    #     destinations='place_id:{}'.format(destination['place_id']),
-                    #     mode='transit',
-                    #     language="english")
-                    # print(dmy)
-                    duration = dmx['rows'][0]['elements'][0]['duration']['value']
-
-                    it_step.duration = duration
-                    it_step.save()
+                    origin_poi = PlaceOfInterest.objects.get(place_id=origin['place_id'])
+                    destination_poi = PlaceOfInterest.objects.get(place_id=destination['place_id'])
+                    # Call Google distance matrix with user's parameters
+                    if transporation_methods:
+                        for key, value in transporation_methods.items():
+                            if value:
+                                method_choice = {
+                                    'walking':ItineraryStep.METHOD_CHOICES.WALK,
+                                    'driving':ItineraryStep.METHOD_CHOICES.CAR,
+                                }
+                                dmx = gmaps.distance_matrix(
+                                    origins='place_id:{}'.format(origin['place_id']),
+                                    destinations='place_id:{}'.format(destination['place_id']),
+                                    mode=key,
+                                    language="english"
+                                )
+                                print("End of the API call.")
+                                it_step = ItineraryStep.objects.create(
+                                    origin=origin_poi,
+                                    destination=destination_poi,
+                                    itinerary=itinerary,
+                                    # TODO: (driving, walking, bicycling, transit)
+                                    method=method_choice[key]
+                                )
+                                duration = dmx['rows'][0]['elements'][0]['duration']['value']
+                                it_step.duration = duration
+                                it_step.save()
 
                 # To DEBUG remove comments
                 # else:
                 #     print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
 
+        '''
+        all_distances = itinerary.get_distance_matrix_places_format()
+        dmx = gmaps.distance_matrix(
+            origins=all_distances,
+            destinations=all_distances,
+            mode='walking',
+            language='english'
+        )
+        print("Got distances. {} Elements.\n{}".format(len(dmx),dmx))
+        for outer in enumerate(all_distances):
+            for inner in enumerate(all_distances):
+                if not outer[1] == inner[1]:
+                    it_step = ItineraryStep.objects.get(itinerary=itinerary,origin__place_id=outer[1][9:],destination__place_id=inner[1][9:])
+                    it_step.duration = dmx['rows'][outer[0]]['elements'][inner[0]]['duration']['value']
+                    it_step.save()
+                    #print("FROM ", outer[1][9:]," TO ",inner[1][9:])
+                    #print(dmx['rows'][outer[0]]['elements'][inner[0]]['duration']['value'])
+        '''
         # one liner to print steps just to verify
-        [print(step) for step in itinerary.steps.all()]
+        # [print(step) for step in itinerary.steps.all()]
         # create the string that will be embeded in the problem file.
-        file_contents = create_pddl_problem(itinerary)
+        file_contents = create_pddl_problem(itinerary, awaken_times, output_plan=False)
         file_name = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
         # add contents to file.
         write_pddl_file(file_contents, file_name)
-        plan = run_subprocess(itinerary.slug,sleep_for=5)
         try: 
+            plan = run_subprocess(itinerary.slug,sleep_for=run_plan_for)
             plan_dict = convert_plan(plan)
         except TypeError:
             data = {
                 'message':'An error occurred whilst running the itinerary.'
             }
             return JsonResponse(data, status=400)
-        for index in range(len(plan_dict)):
+        except:
+            data = {
+                'message':'The server didn\'t come up with a feasible plan, sorry!'
+            }
+            return JsonResponse(data, status=400)
+        for index in enumerate(plan_dict):
+            if plan_dict[index[0]]['method'] == 'car':
+                method = 2
+            if plan_dict[index[0]]['method'] == 'walk':
+                method = 0
             current_step_qs = itinerary.steps.all().filter(
-                origin__slug=plan_dict[index]['from']
+                origin__slug=plan_dict[index[0]]['from']
             ).filter(
-                destination__slug=plan_dict[index]['to']
+                destination__slug=plan_dict[index[0]]['to']
+            ##).get()
+            ).filter(
+                 method=method
             ).get()
-            # ).filter(
-            #     method=ItineraryStep.METHOD_CHOICES[plan_dict[]]
-            # ).get()
-            current_step_qs.index = plan_dict[index]['index']
+            current_step_qs.index = plan_dict[index[0]]['index']
+            print(current_step_qs.origin.place_id)
+            print(current_step_qs.destination.place_id)
+            plan_dict[index[0]]['fromPlaceId']=current_step_qs.origin.place_id
+            plan_dict[index[0]]['toPlaceId']=current_step_qs.destination.place_id
             current_step_qs.save()
-            print(current_step_qs.index,":",current_step_qs.origin,"->",current_step_qs.destination,":",current_step_qs.method)
-        # NEXT STEPS:::::::::::::::::::::::::::::
-        # CREATE PDDL PROBLEM FILE
-        # RUN PROBLEM FILE ON A SUBPROCESS
-        # PARSE RESULT FROM THE TERMINAL
-        # using the following multiline regex: ^\d{1,5}.\d{1,5}: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$
-        # re.compile(r"", re.MULTILINE)
-        # UPDATE THE INDEX ACCORDING TO THE VISIT TIMES
-        # THINK ABOUT WHAT TO DO WITH THE TIME TO SPEND IN EACH LOCATION
-
-        # TODO, create JSON response for the steps.
+            print(current_step_qs.index,":",current_step_qs.origin,"->",current_step_qs.destination,":",current_step_qs.METHOD_CHOICES[current_step_qs.method])
+        plan_json = json.dumps(plan_dict, ensure_ascii=False)
         if self.request.is_ajax():
             # Request is ajax, send a json response
             data = {
-                'final_plan:': str(plan_dict)
+                'final_plan': plan_json
             }
             return JsonResponse(data, status=200)
         return response

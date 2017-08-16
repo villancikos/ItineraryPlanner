@@ -9,30 +9,35 @@
 		(time ?num - int)
 		(visited ?tourist - tourist ?loc - location)
 	  (path ?x ?y - location)
+    (awake ?tourist - tourist)
 )
 
-(:functions (traveltime ?mode - mode ?loc-from ?loc-to - location)
+(:functions 
+  (traveltime ?mode - mode ?loc-from ?loc-to - location)
 	(visitfor ?loc - location ?tourist - tourist))
 
 (:durative-action MOVE
-  :parameters
-   (?tourist - tourist
+  :parameters(
+    ?tourist - tourist
     ?loc-from - location
     ?loc-to - location
-    ?mode - mode)
-  :duration (=?duration (traveltime ?mode ?loc-from ?loc-to))
+    ?mode - mode
+  )
+  :duration (=?duration 
+    (traveltime ?mode ?loc-from ?loc-to)
+  )
   :condition
-  (
-    and 
+  (and 
     (at start (at ?tourist ?loc-from)) 
     (at start (path ?loc-from ?loc-to))
+    (over all (awake ?tourist))
   ) 
   :effect
-  (
-    and 
+  (and 
     (at start (not (at ?tourist ?loc-from))) 
-    (at end (at ?tourist ?loc-to)))
+    (at end (at ?tourist ?loc-to))
   )
+)
 
 (:durative-action VISIT
  :parameters
@@ -40,7 +45,11 @@
    ?loc - location)
  :duration (=?duration (visitfor ?loc ?tourist))
  :condition
-   (and (over all (at ?tourist ?loc)) (over all (open ?loc)))
+ (and 
+    (over all (at ?tourist ?loc)) 
+    (over all (open ?loc))
+    (over all (awake ?tourist))
+)
  :effect
    (at end (visited ?tourist ?loc)))
  

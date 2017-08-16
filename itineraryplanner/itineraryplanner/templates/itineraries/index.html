@@ -11,22 +11,43 @@
     <link href="{% static 'css/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
     <link href="{% static 'css/style.css' %}" rel="stylesheet">
     <link href="{% static 'css/searchbox.css' %}" rel="stylesheet">
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN"
+        crossorigin="anonymous">
 </head>
 
 <body>
+    <div id="loadingDiv">
+        <img src="{% static 'images/spinner.svg' %}" onerror="{% static 'images/spinner.gif' %}" alt="loading icon"/>
+    </div>
     <div class="container-fluid wrapper">
-        <div class="row">
-            <div id="places" class="col-lg-4 d-flex flex-column p-0">
-                <input id="pac-input" class="controls" type="text" placeholder="Search Box">
+        <div class="row leftSidebar">
+            <div id="places" class="col-lg-4 p-0">
+                <input id="pac-input" class="controls noEnterSubmit" type="text" placeholder="Search Box">
                 <form id="placesSelectedForm" method="POST" action="{% url 'itineraries:itineraryPicker' %}">
                     {% csrf_token %} {% comment %}<input type="hidden" name="" value="" />{% endcomment %}
-                    <input id="id_placesToVisit" type="hidden" name="placesToVisit" value="" />
-                    <input id="id_distanceMx" type="hidden" name="distanceMx" value="shit" />
-                    <button id="submitPlaceSelection" type="submit">Submit</button>
-                    <button id="clearPlaces" type="button">Clear</button>
+                    <input id="id_placesToVisit" type="hidden" name="placesToVisit" />
+                    <input id="id_distanceMx" type="hidden" name="distanceMx" />
+                    <div class="row">
+                        <div class="col-6">
+                            <button id="submitPlaceSelection" class="btn-block" type="submit">Submit</button>
+                        </div>
+                        <div class="col-6">
+                            <button id="clearPlaces" class="btn-block" type="button">Remove All</button>
+                        </div>                        
+                    </div>
+                    <div class="row awakeTimes">
+                        <div class="col-6">
+                            <label for="wakeUpTime">Wake Up Time</label>
+                            <input class="wakeUpTime inputMask" name="wakeUpTime" type="text" size="6"/>
+                        </div>
+                        <div class="col-6">
+                            <label for="sleepTime">Go To Bed</label>
+                            <input class="sleepTime inputMask" name="sleepTime" type="text" size="6"/>
+                        </div>                        
+                    </div>
+                    <div id="searchedPlaces">
+                    </div>
                 </form>
-                <div id="searchedPlaces">
-                </div>
             </div>
             {% comment %} Everything map related goes here {% endcomment %}
             <div id="map" class="col-lg-8"></div>
@@ -62,14 +83,25 @@
     <!-- end of wrapper-->
     <script type="text/javascript" src="{% static 'js/jquery-3.2.1.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/js.cookie.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/moment.js' %}"></script>    
+    <script type="text/javascript" src="{% static 'js/moment.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap/tether/tether.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.inputmask.bundle.js' %}"></script>  
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB62WXl60F8rx74hDmKjj_sBJRwu5Wgnlo&libraries=places"></script>
     {% comment %}
     <script type="text/javascript" src="{% static 'js/itineraryPicker.js' %}"></script>{% endcomment %}
     <script>
-        var ferTestList = [];
+        var $loading = $('#loadingDiv').hide();
+        $(document)
+            .ajaxStart(function () {
+                $loading.show();
+            })
+            .ajaxStop(function () {
+                $loading.hide();
+            }).ready(function(){
+                $('.inputMask').inputmask({"mask": "99:99hrs"}); //specifying options
+              });
+        // Input Mask plugin info
         var successURL = "{{success_url}}";
         var distanceMatrix = [];
         var mapInitialLocation = {
@@ -79,9 +111,12 @@
         var map, placesService, infoWindow;
         var markers = [];
         var placesSelected = [];
+        var idOfPlacesSelected = [];
         // this list holds the complete google response after search (place object)
         var googleSearchedPlaces = [];
         var hostnameRegexp = new RegExp('^https?://.+?/');
+        // global list for directionRenderer
+        directionsRendererList = [];
         //var service = new google.maps.DistanceMatrixService;
         // debugger;
         // var csrftoken = Cookies.get('csrftoken');
@@ -99,9 +134,13 @@
         });
         // init placesService instance 
         placesService = new google.maps.places.PlacesService(map);
+        var defaultBounds = new google.maps.LatLngBounds(
+            new google.maps.LatLng(51.242047, -0.568342), // southWest (Guildford)
+            new google.maps.LatLng(51.712468, 0.238466) // northEast (Chipping Ongard)
+        );
         // Create the search box and link it to the UI element.
         var input = document.getElementById("pac-input");
-        var searchBox = new google.maps.places.SearchBox(input);
+        var searchBox = new google.maps.places.SearchBox(input, { bounds: defaultBounds });
         map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
         // Bias the SearchBox results towards current map's viewport.
         map.addListener("bounds_changed", function () {
@@ -109,22 +148,28 @@
         });
         // Listen for the event fired when the user selects a prediction and retrieve
         // more details for that place.
+        // FILTERING!!! https://stackoverflow.com/questions/35873804/using-google-places-searchbox-to-retrieve-only-address-results
         searchBox.addListener("places_changed", function () {
+            // we just want one place or at least the first one.
             var places = searchBox.getPlaces();
-            if (places.length == 0) {
+
+            // TODO: HACK to only get the first one. IS NOT PERFECT I KNOW.
+            var place = places[0];
+            if (places.length === 0) {
                 return;
             }
             // For each place, get the icon, name and location.
             var bounds = new google.maps.LatLngBounds();
-            places.forEach(function (place) {
-                //console.log("places",place);
-                ferTestList.push(place);
-                if (!place.geometry) {
-                    console.log("Returned place contains no geometry");
-                    return;
-                }
-                googleSearchedPlaces.push("place_id:"+place.place_id);
-                placesSelected.push(place.geometry.location);
+            //places.forEach(function (place) {
+            if (!place.geometry) {
+                console.log("Returned place contains no geometry");
+                return;
+            }
+            // debugger;
+            if (jQuery.inArray(place.place_id, idOfPlacesSelected) === -1) {
+                googleSearchedPlaces.push("place_id:" + place.place_id);
+                placesSelected.push(place);
+                idOfPlacesSelected.push(place.place_id);
                 populateMarkers(place);
                 if (place.geometry.viewport) {
                     // Only geocodes have viewport.
@@ -132,18 +177,18 @@
                 } else {
                     bounds.extend(place.geometry.location);
                 }
-            });
-            map.fitBounds(bounds);
-        });
-        function callbackFunction(response, status) {
-            if (status !== 'OK') {
-                console.log('Error was: ' + status);
-            } else {
-                distanceMatrix = response.rows;
-                console.log("TheResponse:", response.rows);
+                map.fitBounds(bounds);
             }
-        };
+            else {
+                alert("It appears you already selected that place.\nTry a new one");
+                $('#pac-input').val(" ");
+                $('#pac-input').focus();
+            }
+            //});
+            $('#pac-input').val("");
+        });
 
+        // We no longer use this function because we delegate it to the Back End.
         function distanceMatrixCall() {
             var computedDistances = [];
             var gs = new google.maps.DistanceMatrixService;
@@ -194,27 +239,41 @@
                 $.ajax({
                     type: "POST",
                     url: successURL,
-                    data: { placesToVisit: toSubmitJsonList },
+                    data: { placesToVisit: toSubmitJsonList},
                     success: function (json) {
                         // What we receive from success on server side.
                         console.log("success!");
-                        console.log(json);
+                        console.log(json.responseJSON);
                         $("#submitPlaceSelection").attr("disabled", false);
                     },
                     error: function (json) {
                         // in case of error we get this from server
                         $("#submitPlaceSelection").attr("disabled", false);
-                        console.log("Was error");
+                        console.log(json.responseJSON);
                     },
                 });
             });
         };
 
+        
         // Listener for the submit inside the sidebar list with selectedPlaces.
-        $('#submitPlaceSelection').on('click', function (e) {
+        $('#placesSelectedForm').on('submit', function (e) {
             e.preventDefault();
+            $myForm = JSON.stringify($(this).serializeArray());
+            var awakeTimes = $()
+            // Preparing Preferences Dict 
+            var preferenceDict = {};
+            $( "#searchedPlaces ul" ).children().each(function(){ 
+                var key = $(this).data()['place_id'];
+                preferenceDict[key] = {};
+                preferenceDict[key]['priority']=$(this).find('.priorityInput').val();
+                preferenceDict[key]['visitFor']=$(this).find('.visitForInput').val();
+                preferenceDict[key]['startAt']=$(this).find('.startAtInput:checked').val()||false;
+                preferenceDict[key]['endAt']=$(this).find('.endAtInput:checked').val()||false;
+            });
+            var toSubmitPreferences = JSON.stringify(preferenceDict);         
             $("#submitPlaceSelection").attr("disabled", true);
-            if (markers.length<=1){
+            if (markers.length <= 1) {
                 alert("You need to add more than one location.");
                 $("#submitPlaceSelection").attr("disabled", false);
                 return;
@@ -225,11 +284,11 @@
             // Therefore we wrap it up in a different function with
             // its callback.
             var toSubmitList = []
-                markers.map(function (marker) {
-                    return toSubmitList.push(make_json_marker(marker));
-                });
+            markers.map(function (marker) {
+                return toSubmitList.push(make_json_marker(marker));
+            });
             var toSubmitJsonList = JSON.stringify(toSubmitList);
-            
+
             var csrftoken = Cookies.get('csrftoken');
             function csrfSafeMethod(method) {
                 // these HTTP methods do not require CSRF protection
@@ -243,22 +302,115 @@
                 }
             });
             $.ajax({
-                    type: "POST",
-                    url: successURL,
-                    data: { placesToVisit: toSubmitJsonList },
-                    success: function (json) {
-                        // What we receive from success on server side.
-                        console.log("success!");
-                        console.log(json);
-                        $("#submitPlaceSelection").attr("disabled", false);
-                    },
-                    error: function (json) {
-                        // in case of error we get this from server
-                        $("#submitPlaceSelection").attr("disabled", false);
-                        console.log("Was error");
-                    },
+                type: "POST",
+                url: successURL,
+                data: { placesToVisit: toSubmitJsonList, preferences: toSubmitPreferences },
+                success: function (json) {
+                    // What we receive from success on server side.
+                    console.log("success!");
+                    console.log(json);
+                    drawRoute(json);                    
+                    $("#submitPlaceSelection").attr("disabled", false);
+                },
+                error: function (json) {
+                    // in case of error we get this from server
+                    $("#submitPlaceSelection").attr("disabled", false);
+                    console.log(json.responseJSON);
+                },
             });
         });
+        
+        function getRandomColor() {
+            var letters = '0123456789ABCDEF';
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+        function renderDirections(result) {
+
+            var polylineOptionsActual = new google.maps.Polyline({
+                strokeColor: getRandomColor(),
+                strokeOpacity: 0.6,
+                strokeWeight: 4,
+            });
+            //if (window.directionsRenderer != null) {
+            //    directionsRenderer.setMap(null);
+            //    directionsRenderer = null;
+            //}
+            directionsRenderer.push(
+                new google.maps.DirectionsRenderer(
+                    { 
+                        map: map,
+                        suppressMarkers: true, 
+                        polylineOptions: polylineOptionsActual 
+                    }
+                ).setDirections(result)
+            )
+
+            //window.directionsRenderer.setMap(map);
+            //window.directionsRenderer.setDirections(result);
+        }
+        function drawRoute(json) {
+            window.directionsService = new google.maps.DirectionsService;
+            planDict = JSON.parse(json['final_plan']);  
+            directions = []; 
+            // clear old renderers.
+            directionsRendererList.forEach(function(directionRenderer){
+                directionRenderer.setMap(null);
+                directionRenderer = null;
+            });
+            directionsRendererList=[];
+            Object.keys(planDict).forEach(function(key){
+                var fromPlaceId = planDict[key]['fromPlaceId']
+                var toPlaceId =planDict[key]['toPlaceId']
+                var fromLocation = null;
+                var toLocation = null;
+                placesSelected.forEach(function(element){
+                    if (element.place_id === fromPlaceId){
+                        fromLocation = element.geometry.location;
+                    }
+                    if (element.place_id === toPlaceId){
+                        toLocation = element.geometry.location;
+                    }
+                });
+                window.directionsService.route({
+                    origin: fromLocation,
+                    destination: toLocation,
+                    travelMode: 'WALKING'
+                    }, function(response, status) {
+                        if (status === 'OK') {
+                            //window.directionsDisplay.setDirections(response);
+                            directions.push(response);  
+                            // create a polyline with random color
+                            var polylineOptionsActual = new google.maps.Polyline({
+                                strokeColor: getRandomColor(),
+                                strokeOpacity: 0.6,
+                                strokeWeight: 4,
+                            });
+                            // for each response create a new renderer object.
+                            var directionRenderer = new google.maps.DirectionsRenderer(
+                                { 
+                                    map: map,
+                                    suppressMarkers: true, 
+                                    polylineOptions: polylineOptionsActual 
+                                }
+                            )
+                            directionRenderer.setDirections(response)
+                            directionsRendererList.push(directionRenderer);
+                            console.log("Here comes the renderer List...........................")                            
+                            console.log(directionsRendererList)
+                            //renderDirections(response);
+                        } else {
+                            window.alert('Directions request failed due to ' + status);
+                        }
+                });
+                //window.directionsDisplay.setDirections(directions);
+            });
+            
+        }
+  
 
         // Listener for Clear button in case user wants to delete every marker from map
         $('#clearPlaces').on('click', function (e) { clearOldMarkers(); });
@@ -273,11 +425,9 @@
                 "name": marker.placeResult.name,
                 "lat": marker.position.lat(),
                 "lng": marker.position.lng(),
-                "opens" : opens,
+                "opens": opens,
                 "closes": closes
             }
-            console.log($marker_obj);
-            //return JSON.stringify($marker_obj, null, 4);
             return $marker_obj
         }
 
@@ -285,46 +435,255 @@
             placesSelected.push(googlePlace);
             // addSelectedPlaceToSidebar(googlePlace);
         }
-        function getPlaceOpeningTimes(placeResult){
+        function getPlaceOpeningTimes(placeResult) {
             let has_opening_hours = placeResult.hasOwnProperty('opening_hours');
             let today = moment().format('d');
             let opens = null;
-            let closes = null;            
+            let closes = null;
             if (has_opening_hours) {
-                if (placeResult.opening_hours.periods.length === 1) {
-                    // it opens 24 hours. Therefore not closing.
-                    if (!placeResult.opening_hours.periods[0].hasOwnProperty('close')) {
-                        opens = '0000'
+                if (placeResult.opening_hours.hasOwnProperty('periods')) {
+                    if (placeResult.opening_hours.periods.length === 1) {
+                        // it opens 24 hours. Therefore not closing.
+                        if (!placeResult.opening_hours.periods[0].hasOwnProperty('close')) {
+                            opens = '0000'
+                        }
                     }
-                }
-                else {
-                    opens = placeResult.opening_hours.periods[today].open.time;
-                    closes = placeResult.opening_hours.periods[today].close.time;
+                    else if (placeResult.opening_hours.periods.length > today) {
+                        opens = placeResult.opening_hours.periods[today].open.time;
+                        closes = placeResult.opening_hours.periods[today].close.time;
+                    }
+                    // This else only occurs if one of the days is a Festivity or similar.
+                    else{
+                        opens = placeResult.opening_hours.periods[0].open.time;
+                        closes = placeResult.opening_hours.periods[0].close.time;
+                    }
                 }
             }
             return {
-                    'opens': opens,
-                    'closes': closes
+                'opens': opens,
+                'closes': closes
             }
         }
         function addSelectedPlaceToSidebar(googlePlaceMarker) {
-            // if the place already exists in our list ignore
-            var searchedPlaces = document.getElementById('searchedPlaces');
-            if (!searchedPlaces.children.length) {
-                var ul = document.createElement('ul');
-                ul.className = 'list-group';
+            // Function to add places to the sidebar.
+            var $searchedPlaces = $('#searchedPlaces');
+            // only create the UL if it doesn't exist already.            
+            if ($('#searchedPlaces ul').length === 0) {
+                var $ul = $('<ul>').addClass('list-group');
+                // beChecked used to default Initial Place (hotel)
+                var beChecked = true;
             }
             else {
-                var ul = searchedPlaces.children[0];
+                var $ul = $('#searchedPlaces ul');
+                var beChecked = false;
             }
-            var name = document.createTextNode(googlePlaceMarker.title);
-            console.log(googlePlaceMarker.placeResult.name);
+            var $name = googlePlaceMarker.title;
+            var $place_id = googlePlaceMarker.placeResult.place_id;
+            if (googlePlaceMarker.placeResult.photos) {
+                var picture = googlePlaceMarker.placeResult.photos[0].getUrl({ 'maxWidth': 120, 'maxHeight': 120 })
+            }
+            else {
+                // TODO: Change placeholder to a local image to avoid API Calls.
+                var picture = 'https://dummyimage.com/80x80/000/ffffff&text=No+Picture';
+            }
+
+            //var $imgDiv = $('<div>').addClass('align-self-center p-2');
+            //var $img = $('<img>').prop('src', picture);
+            //$imgDiv.append($img);
+
+            var $liWrapper = $('<li data-place_id='+$place_id+'>').addClass('placeItem container');
+            var $placeRow = $('<div>').addClass('row');
+            var $titleDiv = $('<div>').addClass('col-10');
+            var $titleElement = $('<p>').text($name);
+            $titleDiv.append($titleElement);
+            var $removePlaceButton = $('<div class="col-2 removePlaceBtn"><a class="btn" href="#" data-place_id="'+$place_id+'"><i class="fa fa-window-close" aria-hidden="true"></i></a></div>');
+            var $priorityDiv = $('<div>').addClass('col-8');
+            var $priorityLabel = $('<label for="priority">Priority</label>');
+            $priorityDiv.append($priorityLabel).append(
+                $('<select>')
+                    .attr('name', 'priority')
+                    .attr('id', 'priority')
+                    .addClass('priorityInput mx-2')
+                    .append(
+                    $('<option>', {
+                        value: 0,
+                        text: "Visit if Possible"
+                    }))
+                    .append(
+                    $('<option>', {
+                        value: 1,
+                        text: "Like to Visit"
+                    }))
+                    .append(
+                    $('<option>', {
+                        value: 2,
+                        text: "Should Visit!"
+                    })
+                    )
+                    .append(
+                    $('<option>', {
+                        value: 3,
+                        text: "Must Visit!!!"
+                    })
+                    ).prop('required', true)
+            );
+            if (beChecked){
+                var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt', checked: beChecked, value: $place_id});
+                var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt',checked: beChecked , value: $place_id});            
+            }
+            else{
+                var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt', value: $place_id});
+                var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt', value: $place_id });
+            }
+            $inputForStartAt.addClass('startAtInput');
+            $inputForEndAt.addClass('endAtInput');
+            var $startAtDiv = $('<div class="col-4 startAtDiv">').append(
+                $('<label for="startAt">Start-at:</label>')
+            ).append(
+                $inputForStartAt
+            );
+            var $endAtDiv = $('<div class="col-4 endAtDiv">').append(
+                $('<label for="endAt">End-at:</label>')
+            ).append(
+                $inputForEndAt
+            );
+            var $spendDiv = $('<div class="col-8">').append(
+                $('<label for="visit-for">Spend</label>')
+            ).append(
+                $('<input>', { type: 'number', name: 'visit-for', value: '30' })
+                .addClass('visitForInput rounded mx-1')
+                .prop('required', true)
+                .prop('width', 5)
+            );
+            $liWrapper.append($placeRow);
+            $placeRow.append(
+                $placeRow
+            ).append(
+                $titleDiv
+            ).append(
+                $removePlaceButton
+            ).append(
+                $priorityDiv
+            ).append(
+                $startAtDiv
+            ).append(
+                $spendDiv    
+            ).append(
+                $endAtDiv
+            );
+            $liWrapper.on("click", function () {
+                google.maps.event.trigger(googlePlaceMarker, 'click');
+            });
+            $ul.append($liWrapper);
+            $searchedPlaces.append($ul);
+            
+            //$removePlaceButton.on('click', clearThisMarker($(this).children().data()));
+            $removePlaceButton.on('click', function(){
+                var placeId = $(this).children().data()['place_id'];
+                console.log(placeId);    
+                clearThisMarker(placeId);
+            });
+            /*
+            var $optionsDiv = $('<div>').addClass('d-flex flex-column');
+            var $placeTitleDiv = $('<h5>').text($name).removeClass();
+            var $flexRow = $('<div>').addClass('container');
+            var $priorityLikeInputs = $('<div>').addClass('d-flex align-items-baseline');
+            var $secondOptionsDiv = $('<div>').addClass('d-flex');
+            var $startEndInputsDiv = $('<div>').addClass('p-1');
+            var $labelForStartAt = $('<label for="startAt">Start-at:</label>');
+            var $labelForEndAt = $('<label for="endAt">End-At</label>');
+            if (beChecked){
+                var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt', checked: beChecked});
+                var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt',checked: beChecked });            
+            }
+            else{
+                var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt'});
+                var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt' });
+            }
+            $optionsDiv.append($placeTitleDiv);
+            $optionsDiv.append('<input name="place_id" type="hidden" value="'+$place_id+'">');
+            var $prioritySelectorInput = $('<select>')
+                .attr('name', 'priority')
+                .attr('id', 'priority')
+                .addClass('mx-2')
+                .append(
+                $('<option>', {
+                    value: 0,
+                    text: "Visit if Possible"
+                }))
+                .append(
+                $('<option>', {
+                    value: 1,
+                    text: "Like to Visit"
+                }))
+                .append(
+                $('<option>', {
+                    value: 2,
+                    text: "Should Visit!"
+                })
+                )
+                .append(
+                $('<option>', {
+                    value: 3,
+                    text: "Must Visit!!!"
+                })
+                ).prop('required', true);
+            $optionsDiv.append($prioritySelectorInput);
+            $secondOptionsDiv.append($startEndInputsDiv)
+                .append($labelForStartAt)
+                .append($inputForStartAt)
+                .append($labelForEndAt)
+                .append($inputForEndAt);
+            var $opensClosesDiv = $('<div>').addClass('p-1');
+            var $opensSpan = $('<span><i class="fa fa-clock-o mr-1"></i>Opens: 11:00</span>');
+            var $closesSpan = $('<span><i class="fa fa-clock-o mr-1"></i>Closes: 22:00</span>');
+            var $priorityLabel = $('<label class="d-inline-flex" for="priority">Priority</label>');
+            $secondOptionsDiv.append($opensClosesDiv)
+                .append($opensSpan)
+                .append($closesSpan);
+            var $prioritySelectorInput = $('<select>')
+                .attr('name', 'priority')
+                .attr('id', 'priority')
+                .addClass('mx-2')
+                .append(
+                $('<option>', {
+                    value: 0,
+                    text: "Visit if Possible"
+                }))
+                .append(
+                $('<option>', {
+                    value: 1,
+                    text: "Like to Visit"
+                }))
+                .append(
+                $('<option>', {
+                    value: 2,
+                    text: "Should Visit!"
+                })
+                )
+                .append(
+                $('<option>', {
+                    value: 3,
+                    text: "Must Visit!!!"
+                })
+                ).prop('required', true);
+            var $likeLabel = $('<label for="visit-for">Time to Spend</label>')
+            var $visitForInput = $('<input>', { type: 'number', name: 'visit-for', value: '30' })
+                .addClass('align-self-start rounded mx-1')
+                .prop('required', true);
+            $priorityLikeInputs.append($priorityLabel).append($prioritySelectorInput);
+            $priorityLikeInputs.append($likeLabel).append($visitForInput);
+            $optionsDiv.append($priorityLikeInputs);
             var openingTimes = getPlaceOpeningTimes(googlePlaceMarker.placeResult);
-            console.log(openingTimes.opens);
-            console.log(openingTimes.closes);
-            var li = document.createElement('li');
-            li.className = 'list-group-item';
-            li.appendChild(name);
+            googlePlaceMarker.openingTimes = openingTimes;
+            var $li = $('<li>').addClass('list-group-item d-flex');
+            //$li.append($imgDiv);
+            $li.append($optionsDiv);
+            $li.append($secondOptionsDiv);
+            //$li.append($name);
+            // creating the input to Start in this location (i.e. hotel)
+            //var $startHere = $('<input>', {type:'checkbox', name:'startHere'}).prop('checked',beChecked);
+            //$startHere.appendTo($li);
             // inserting click event to display on map
             // var marker = new google.maps.Marker({
             //     position: { 
@@ -335,17 +694,13 @@
             // marker.placeResult = googlePlace;
             // google.maps.event.addListener(marker, "click", showInfoWindow);
             // setTimeout(dropMarker(marker))
-
-            li.addEventListener('click', function () {
+            $li.on("click", function () {
                 google.maps.event.trigger(googlePlaceMarker, 'click');
-                console.log("clicked");
-            }, false);
+            });
+            $li.appendTo($ul);
+            $searchedPlaces.append($ul);
+            */
 
-            // li.onclick = function() {
-            //   google.maps.event.trigger(marker, "click");
-            // };
-            ul.appendChild(li);
-            searchedPlaces.appendChild(ul);
         }
 
         // Get the place details for a hotel. Show the information in an info window,
@@ -362,11 +717,10 @@
                 });
         }
 
-
         // Load the place information into the HTML elements used by the info window.
         function buildIWContent(place) {
             document.getElementById("iw-icon").innerHTML =
-                '<img class="hotelIcon" ' + 'src="' + place.icon + '"/>';
+                '<img class="placeIcon" ' + 'src="' + place.icon + '"/>';
             document.getElementById("iw-url").innerHTML =
                 '<b><a href="' + place.url + '">' + place.name + "</a></b>";
             document.getElementById("iw-address").textContent = place.vicinity;
@@ -436,13 +790,6 @@
             google.maps.event.addListener(googlePlaceMarker, "click", showInfoWindow);
             // Push the entire marker to the markers dict.
             markers.push(googlePlaceMarker);
-            //var json_markers = markers.map(function (place) {
-            //    //return jsonifyPlace(place);
-            //    return make_json_marker(place);
-            //});
-            //console.log(json_markers);
-            //$('#id_placesToVisit').val(json_markers);
-            //addPlaceToList(place);
             addSelectedPlaceToSidebar(googlePlaceMarker);
         }
 
@@ -455,13 +802,60 @@
             markers = [];
             placesSelected = [];
             googleSearchedPlaces = [];
+            idOfPlacesSelected = [];
             $('#id_placesToVisit').val('');
             $('#id_distanceMx').val('');
-            $('#searchedPlaces ul').empty();
+            $('#searchedPlaces ul').remove();
             $('#pac-input').val(" ");
             $('#pac-input').focus();
+            // delete also old directions renderers:
+            // clear old renderers.
+            directionsRendererList.forEach(function(directionRenderer){
+                directionRenderer.setMap(null);
+                directionRenderer = null;
+            });
+
+
 
         }
+
+        function clearThisMarker(placeId){
+            var indexToRemove = null;
+            markers.forEach( function(marker, index) {
+                if (marker.placeResult.place_id === placeId){
+                    indexToRemove = index;
+                }
+            });
+            google.maps.event.clearInstanceListeners(markers[indexToRemove]);
+            markers[indexToRemove].setMap(null);
+            // Remove the marker from Markers List
+            markers.splice(indexToRemove, 1);
+            // Remove place from SidebarList.
+            $liToDelete = $('#searchedPlaces ul').find("[data-place_id='"+placeId+"']");
+            $liToDelete.remove();
+            // Remove place from PlacesSelected List
+            var indexToRemovePlaces = null;
+            placesSelected.forEach( function(place, index){
+                if (place.place_id === placeId){
+                    indexToRemovePlaces = index;
+                }
+            });
+            var indexToRemoveIds = null;
+            idOfPlacesSelected.forEach( function(place, index){
+                if (place === placeId){
+                    indexToRemoveIds = index;
+                }
+            });
+
+            placesSelected.splice(indexToRemovePlaces,1);
+            idOfPlacesSelected.splice(indexToRemoveIds,1);
+
+        }
+
+        // Code to prevent user of pressing enter on input to avoid massive searches.
+        $('.noEnterSubmit').keypress(function (e) {
+            if (e.which === 13) e.preventDefault();
+        });
     </script>
 </body>
 

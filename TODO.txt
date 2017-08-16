@@ -18,6 +18,21 @@ Useful SO question about the precision of the lat and lng
 https://gis.stackexchange.com/questions/8650/measuring-accuracy-of-latitude-and-longitude
 
 
+Usefl link for changing icons to google directions
+http://googlemaps.googlermania.com/google_maps_api_v3/en/map_example_direction_customicon.html
+
+::::HACER:::
+DONE-Arreglar duplicado despues de correr con walking y driving
+Hacer delgados los paths y enviar el itinerario completo para manipular en frontend
+añadir tambien el filtrado de propiedades en METRICS
+QUITAR PINES DEL MAPA CUANDO LOS BORRE DEL SIDEBAR
+WANTED FEATURE: PONER MAPAS EN SIDEBAR CUANDO LES DAS CLICK EN EL MAPA.
+OJO: Se corrio el itinerary-6749591c-cab5-4e5d-b446-895e74170b82
+con el Domain domain_with_awake.pddl
+** Visit FIRST X Place. Is that possible?
+*** Visit this location between this time and this time.
+**** 
+
 CODE TO DRAW PATHS:
 var directionsService = new google.maps.DirectionsService;
 var directionsDisplay = new google.maps.DirectionsRenderer;
@@ -39,6 +54,15 @@ function calculateAndDisplayRoute(directionsService, directionsDisplay) {
       }
 
 calculateAndDisplayRoute(directionsService,directionsDisplay);
+Useful google discussion for more renderers...
+https://groups.google.com/forum/#!msg/google-maps-js-api-v3/ubomY2IT728/rlhVo94005UJ
+
+useful stack overflow post for different colors on polylines of maps
+https://stackoverflow.com/questions/9311498/change-the-color-of-the-polyline-in-directionsrenderer
+
+a github project that uses Optic 
+https://github.com/Dunes/janitor/tree/master/optic
+
 
 Get the subprocess and do console stuff
 https://www.lifewire.com/g00/write-awk-commands-and-scripts-2200573?i10c.referrer=https%3A%2F%2Fwww.google.nl%2F
