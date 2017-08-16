@@ -1,0 +1,26 @@
+{'ChIJ2dGMjMMEdkgRqVqkuXQkj7c': {'startAt': False, 'endAt': False, 'priority': '1', 'visitFor': '30'
+    }, 'ChIJq4H9JM4EdkgRjHEe4kS8Pck': {'startAt': False, 'endAt': False, 'priority': '3', 'visitFor': '30'
+    }, 'ChIJj3swFNIEdkgRi3YRrdJH0ao': {'startAt': False, 'endAt': 'ChIJj3swFNIEdkgRi3YRrdJH0ao', 'priority': '0', 'visitFor': '30'
+    }, 'ChIJ3VW0o7UEdkgRjZLQfvs-ZLA': {'startAt': False, 'endAt': False, 'priority': '3', 'visitFor': '20'
+    }, 'ChIJyUpBi7UEdkgRnhfSuAtOhAA': {'startAt': False, 'endAt': False, 'priority': '0', 'visitFor': '30'
+    }, 'ChIJScmL5SEFdkgR4e5jqRr1KZ8': {'startAt': 'ChIJScmL5SEFdkgR4e5jqRr1KZ8', 'endAt': False, 'priority': '1', 'visitFor': '30'
+    }, 'ChIJAyDKubUEdkgRW2I9KG58PZQ': {'startAt': False, 'endAt': False, 'priority': '3', 'visitFor': '10'
+    }
+}
+
+[
+    {'lat': 51.5105977, 'closes': None, 'place_id': 'ChIJj3swFNIEdkgRi3YRrdJH0ao', 'is_hotel': False, 'lng': -0.1295989999999847, 'opens': None, 'name': 'Leicester Square'
+    },
+    {'lat': 51.50072919999999, 'closes': None, 'place_id': 'ChIJ2dGMjMMEdkgRqVqkuXQkj7c', 'is_hotel': False, 'lng': -0.12462540000001354, 'opens': None, 'name': 'Big Ben'
+    },
+    {'lat': 51.51125529999999, 'closes': None, 'place_id': 'ChIJAyDKubUEdkgRW2I9KG58PZQ', 'is_hotel': False, 'lng': -0.11531539999998586, 'opens': None, 'name': 'Macadam Building'
+    },
+    {'lat': 51.511028, 'closes': None, 'place_id': 'ChIJyUpBi7UEdkgRnhfSuAtOhAA', 'is_hotel': False, 'lng': -0.11719400000004043, 'opens': None, 'name': 'Somerset House'
+    },
+    {'lat': 51.50790900000001, 'closes': None, 'place_id': 'ChIJq4H9JM4EdkgRjHEe4kS8Pck', 'is_hotel': False, 'lng': -0.1288604999999734, 'opens': None, 'name': 'Trafalgar Square'
+    },
+    {'lat': 51.51148639999999, 'closes': None, 'place_id': 'ChIJ3VW0o7UEdkgRjZLQfvs-ZLA', 'is_hotel': False, 'lng': -0.11599699999999302, 'opens': None, 'name': "King's College London"
+    },
+    {'lat': 51.4945073, 'closes': '2300', 'place_id': 'ChIJScmL5SEFdkgR4e5jqRr1KZ8', 'is_hotel': False, 'lng': -0.14564319999999498, 'opens': '0600', 'name': 'Victoria Place'
+    }
+]

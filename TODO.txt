@@ -1,0 +1,121 @@
+TODOS FOR THE APP BEFORE SUBMITING:
+- Add a Fair-Enough, Optimal , etc... switch to yield better plans?
+- If PDDL output doesn't make sense then return a default or error msg and log it.
+- If user search for the same Place_ID don't allow to add it.
+- Control when user does not click on one of the suggested places to avoid 
+ the app to search for all the related ones. like the Pizza use case...
+- Limit Search boundaries LONDON
+- Also double check to allow only for places which distance is less than "X" meters or "Y" minutes...
+- I made the change to compute distances using Place_ID and didn't work.
+However, the submit was successful and it shouldn't.
+- I found out an example that draws the path!
+https://developers.google.com/maps/documentation/javascript/examples/places-autocomplete-directions
+
+question that suggests using the Place_id: preffix to get it correctly.
+https://stackoverflow.com/questions/31172642/finding-distance-using-place-id
+
+Useful SO question about the precision of the lat and lng
+https://gis.stackexchange.com/questions/8650/measuring-accuracy-of-latitude-and-longitude
+
+
+Usefl link for changing icons to google directions
+http://googlemaps.googlermania.com/google_maps_api_v3/en/map_example_direction_customicon.html
+
+::::HACER:::
+DONE-Arreglar duplicado despues de correr con walking y driving
+Hacer delgados los paths y enviar el itinerario completo para manipular en frontend
+añadir tambien el filtrado de propiedades en METRICS
+QUITAR PINES DEL MAPA CUANDO LOS BORRE DEL SIDEBAR
+WANTED FEATURE: PONER MAPAS EN SIDEBAR CUANDO LES DAS CLICK EN EL MAPA.
+OJO: Se corrio el itinerary-6749591c-cab5-4e5d-b446-895e74170b82
+con el Domain domain_with_awake.pddl
+** Visit FIRST X Place. Is that possible?
+*** Visit this location between this time and this time.
+**** 
+
+CODE TO DRAW PATHS:
+var directionsService = new google.maps.DirectionsService;
+var directionsDisplay = new google.maps.DirectionsRenderer;
+directionsDisplay.setMap(map);
+directionsDisplay.setOptions({markerOptions:'bla'})
+
+function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+        directionsService.route({
+          origin: markers[1].placeResult.geometry.location,
+          destination: markers[2].placeResult.geometry.location,
+          travelMode: 'DRIVING'
+        }, function(response, status) {
+          if (status === 'OK') {
+            directionsDisplay.setDirections(response);
+          } else {
+            window.alert('Directions request failed due to ' + status);
+          }
+        });
+      }
+
+calculateAndDisplayRoute(directionsService,directionsDisplay);
+Useful google discussion for more renderers...
+https://groups.google.com/forum/#!msg/google-maps-js-api-v3/ubomY2IT728/rlhVo94005UJ
+
+useful stack overflow post for different colors on polylines of maps
+https://stackoverflow.com/questions/9311498/change-the-color-of-the-polyline-in-directionsrenderer
+
+a github project that uses Optic 
+https://github.com/Dunes/janitor/tree/master/optic
+
+
+Get the subprocess and do console stuff
+https://www.lifewire.com/g00/write-awk-commands-and-scripts-2200573?i10c.referrer=https%3A%2F%2Fwww.google.nl%2F
+https://stackoverflow.com/questions/4760215/running-shell-command-from-python-and-capturing-the-output
+https://askubuntu.com/questions/420981/how-do-i-save-terminal-output-to-a-file
+https://stackoverflow.com/questions/19059294/catching-terminal-output-in-python
+http://www.guru99.com/reading-and-writing-files-in-python.html
+https://stackoverflow.com/questions/44573389/generating-commands-on-terminal-from-django-after-user-submits-data-on-webpage
+
+
+
+
+Constraints in planning:
+http://www.cs.yale.edu/homes/dvm/papers/pddl-ipc5.pdf
+
+
+NOTES AMANDA
+add at 900 in the morning and then delete it at 
+time initial LITERAL
+conditional to every action
+los time literals es lo de AT open at not open .... ojo
+awake person , not awake person.
+o back to the hotel at this time 
+is "not-bed-time"...
+also a preference.
+-Like TFL PLANNER NO WALK MORE THAN xxx
+- DISABLE ACCESS
+USEFUL TIPS FOR REPORT:
+ how the planner scales
+ experiments i did
+ ideas for the module
+ user change the plan to spend more time
+ interesting question replan and reuse the plan
+ replaning instead of creating the plan from scratch
+ intro why project is good, how many users come to london etc.
+ planners 
+ makesure papers on planners why use those planners, etc
+
+THESE ARE THE SECTIONS (need to ask for more):
+###literature review
+###specification and design...
+some technical reason why python was good not onlt one reason!!! a lot
+
+diagrams of the system.
+
+also ask amanda about all the SECTIONS
+say about testing.. .how I did it ...
+###evaluation ...
+scalability of the planner 
+features that im uuuuuuuuuuuuuuuuuuuuuuuuuuu
+###conclusions
+abstraction inside pddl with google maps.
+showcase ability of the planner. for people not used to it.
+future work
+
+##future scalable rewards tate modern 1 hour instead of 2 because is better for the overall plan.

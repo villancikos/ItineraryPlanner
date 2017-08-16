@@ -45,3 +45,12 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Ignore VSCode File
+.vscode
+
+# Ignore user Files
+/itineraryplanner/itineraryplanner/pddl_files/user_files/
+
+# Ignore output Files
+/itineraryplanner/itineraryplanner/pddl_files/outputs/

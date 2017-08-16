@@ -5,21 +5,21 @@ from django.contrib import admin
 from django.views.generic import TemplateView
 from django.views import defaults as default_views
 
+
 urlpatterns = [
     url(r'^$', TemplateView.as_view(template_name='pages/home.html'), name='home'),
     url(r'^about/$', TemplateView.as_view(template_name='pages/about.html'), name='about'),
-    url(r'^autocomplete/$', 
-        TemplateView.as_view(template_name='pages/autocomplete.html'), 
-        name='autocomplete'),
     # Django Admin, use {% url 'admin:index' %}
     url(settings.ADMIN_URL, admin.site.urls),
 
     # User management
     url(r'^users/', include('itineraryplanner.users.urls', namespace='users')),
     url(r'^accounts/', include('allauth.urls')),
-
-    # Your stuff: custom urls includes go here
-
+    # URls for Google Examples App
+    url(r'^googleExamples/',
+        include('itineraryplanner.google_examples.urls', namespace='google-examples')),
+    url(r'^itineraryPlanner/',
+        include('itineraryplanner.itineraries.urls', namespace='itineraries')),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

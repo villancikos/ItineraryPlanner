@@ -1,3 +1,4 @@
+{% load staticfiles i18n %}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -7,12 +8,12 @@
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet">
-    <link href="css/style.css" rel="stylesheet">
-    <link href="css/autocomplete-map.css" rel="stylesheet">
+    <link href="{% static 'css/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
+    <link href="{% static 'css/autocomplete-map.css' %}" rel="stylesheet">
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB62WXl60F8rx74hDmKjj_sBJRwu5Wgnlo&libraries=places"></script>
-    <script type="text/javascript" src="js/autocomplete-map.js"></script>
-    <script type="text/javascript" src="js/bootstrap/tether/tether.min.js"></script>
+    <script type="text/javascript" src="{% static 'js/autocomplete-map.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/bootstrap/tether/tether.min.js' %}"></script>
 </head>
 
 <body>
@@ -78,8 +79,8 @@
             </div>
         </div><!-- end of row-->
     </div> <!-- end of wrapper-->
-    <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
-    <script type="text/javascript" src="js/bootstrap/bootstrap.min.js"></script>
+    <script type="text/javascript" src="{% static 'js/jquery-3.2.1.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/bootstrap/bootstrap.min.js' %}"></script>
 </body>
 
 </html>

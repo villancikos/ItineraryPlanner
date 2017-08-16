@@ -8,16 +8,16 @@ wheel==0.29.0
 # Bleeding edge Django
 django==1.10.7 # pyup: >=1.10,<1.11
 
-# Configuration
+# Used for the configuration of environment variables
 django-environ==0.4.3
 whitenoise==3.3.0
 
 
-# Forms
+# Extra packages to work better with forms
 django-braces==1.11.0
 django-crispy-forms==1.6.1
 
-# Models
+# Helper functions to maek Models more powerful
 django-model-utils==3.0.0
 
 # Images
@@ -44,8 +44,6 @@ pytz==2017.2
 django-redis==4.8.0
 redis>=2.10.5
 
-
-
-
-
 # Your custom requirements go here
+# Google Maps Client API for Server
+googlemaps==2.5.1

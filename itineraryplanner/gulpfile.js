@@ -6,6 +6,7 @@
 // Plugins
 var gulp = require('gulp'),
       pjson = require('./package.json'),
+      babel = require('gulp-babel'),
       gutil = require('gulp-util'),
       sass = require('gulp-sass'),
       autoprefixer = require('gulp-autoprefixer'),
@@ -23,7 +24,7 @@ var gulp = require('gulp'),
 
 
 // Relative paths function
-var pathsConfig = function (appName) {
+var pathsConfig = appName => {
   this.app = "./" + (appName || pjson.name);
 
   return {
@@ -35,7 +36,7 @@ var pathsConfig = function (appName) {
     images: this.app + '/static/images',
     js: this.app + '/static/js',
   }
-};
+}
 
 var paths = pathsConfig();
 
@@ -58,11 +59,16 @@ gulp.task('styles', function() {
 
 // Javascript minification
 gulp.task('scripts', function() {
-  return gulp.src(paths.js + '/project.js')
+  // return gulp.src(paths.js + '/project.js')
+  return gulp.src(paths.js+'**/*.js')  
+    .pipe(babel({
+      presets: ['es2015'],
+    }))
     .pipe(plumber()) // Checks for errors
     .pipe(uglify()) // Minifies the js
     .pipe(rename({ suffix: '.min' }))
-    .pipe(gulp.dest(paths.js));
+    // .pipe(gulp.dest(paths.js));
+    .pipe(gulp.dest(paths.app+"/static/build/all.js"));    
 });
 
 // Image compression
@@ -81,6 +87,15 @@ gulp.task('runServer', function(cb) {
   });
 });
 
+// Run django server
+gulp.task('runServerPlus', function(cb) {
+  var cmd = spawn('python', ['manage.py', 'runserver_plus'], {stdio: 'inherit'});
+  cmd.on('close', function(code) {
+    console.log('runServer exited with code ' + code);
+    cb(code);
+  });
+});
+
 // Browser sync server for live reload
 gulp.task('browserSync', function() {
     browserSync.init(
@@ -92,14 +107,25 @@ gulp.task('browserSync', function() {
 // Watch
 gulp.task('watch', function() {
 
-  gulp.watch(paths.sass + '/*.scss', ['styles'].on("change", reload));
+  gulp.watch(paths.sass + '/*.scss', ['styles']);
   gulp.watch(paths.js + '/*.js', ['scripts']).on("change", reload);
   gulp.watch(paths.images + '/*', ['imgCompression']);
   gulp.watch(paths.templates + '/**/*.html').on("change", reload);
 
 });
 
+gulp.task('plus', function() {
+    runSequence(['styles', 'scripts', 'imgCompression'], 'browserSync', 'watch', 'runServerPlus');
+});
 // Default task
 gulp.task('default', function() {
-    runSequence(['styles', 'scripts', 'imgCompression'], 'runServer', 'browserSync', 'watch');
+    runSequence(['styles', 'scripts', 'imgCompression'], 'browserSync', 'watch', 'runServer');
 });
+
+// gulp.task('withBabel', () =>{
+//   return gulp.src(paths.app)
+//     .pipe(babel({
+//       presets: ['es2015']
+//     }))
+//     .pipe(gulp.dest('dist'))
+// });

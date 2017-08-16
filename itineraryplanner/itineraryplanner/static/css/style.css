@@ -1,12 +1,17 @@
 /* Always set the map height explicitly to define the size of the div
     * element that contains the map. */
+    /* * {
+        border: 1px solid#ff9393;
+    } */
 #map {
     height: 100%;
     min-height:100%;
-    background-color:#bb90f3;
-    border: 1px solid blue;
 }
 /* Fix to make map full page and 3/4 */
-.wrapper .row {
+.wrapper > .leftSidebar {
     height: 100vh;
+}
+
+ul {
+    list-style: none;
 }
