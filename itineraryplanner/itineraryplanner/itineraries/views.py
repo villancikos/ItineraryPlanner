@@ -232,17 +232,19 @@ class PlacesOfInterestView(FormView):
                 'message':'The server didn\'t come up with a feasible plan, sorry!'
             }
             return JsonResponse(data, status=400)
-        #submittable = plan_dict
         for index in enumerate(plan_dict):
-            # to do, fix mistake with file 
+            if plan_dict[index[0]]['method'] == 'car':
+                method = 2
+            if plan_dict[index[0]]['method'] == 'walk':
+                method = 0
             current_step_qs = itinerary.steps.all().filter(
                 origin__slug=plan_dict[index[0]]['from']
             ).filter(
                 destination__slug=plan_dict[index[0]]['to']
+            ##).get()
+            ).filter(
+                 method=method
             ).get()
-            # ).filter(
-            #     method=ItineraryStep.METHOD_CHOICES[plan_dict[]]
-            # ).get()
             current_step_qs.index = plan_dict[index[0]]['index']
             print(current_step_qs.origin.place_id)
             print(current_step_qs.destination.place_id)
