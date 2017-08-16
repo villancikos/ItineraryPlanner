@@ -73,6 +73,25 @@ class PlacesOfInterestView(FormView):
         #places_to_visit_json = form.cleaned_data['placesToVisit']
         places_to_visit = json.loads(form.cleaned_data['placesToVisit'])
         preferences = json.loads(form.cleaned_data['preferences'])
+        properties = {'wakeUpTime':'0800', 
+                        'sleepTime': '2300',
+                        'runFor': '5',
+                       'methods':{
+                           'driving':True,
+                           'walking':True,
+                       } 
+        }
+        # Get the user preferente for running the Plan.
+        # Make sure to get a Valid Int before hand, else parse a 5 second parameter.
+        try:
+            run_plan_for = int(properties['runFor'])
+        except ValueError:
+            run_plan_for = 5
+        awaken_times = {
+            'awaken': properties['wakeUpTime'],
+            'not_awaken': properties['sleepTime']
+        }
+        transporation_methods = properties['methods']
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
         created_places = []
@@ -147,48 +166,31 @@ class PlacesOfInterestView(FormView):
                 if destination != origin:
                     origin_poi = PlaceOfInterest.objects.get(place_id=origin['place_id'])
                     destination_poi = PlaceOfInterest.objects.get(place_id=destination['place_id'])
-                    it_step = ItineraryStep.objects.create(
-                        origin=origin_poi,
-                        destination=destination_poi,
-                        itinerary=itinerary,
-                        # TODO: each transportation Method from Google api (driving, walking, bicycling, transit)
-                        method=ItineraryStep.METHOD_CHOICES.WALK
-                    )
-                    print("Calling Google for Distance Matrix...")
-                    dmx = gmaps.distance_matrix(
-                        origins='place_id:{}'.format(origin['place_id']),
-                        destinations='place_id:{}'.format(destination['place_id']),
-                        mode="walking",
-                        language="english"
-                    )
-                    dmx_driving = gmaps.distance_matrix(
-                        origins='place_id:{}'.format(origin['place_id']),
-                        destinations='place_id:{}'.format(destination['place_id']),
-                        mode="driving",
-                        language="english"
-                    )
-                    print("End of the call.")
-                    # Testing using different mode (transit)
-                    # dmy = gmaps.distance_matrix(
-                    #     origins='place_id:{}'.format(origin['place_id']),
-                    #     destinations='place_id:{}'.format(destination['place_id']),
-                    #     mode='transit',
-                    #     language="english")
-                    # print(dmy)
-                    duration = dmx['rows'][0]['elements'][0]['duration']['value']
-                    #duration = 10
-                    it_step.duration = duration
-                    it_step.save()
-                    driving_it_step = ItineraryStep.objects.create(
-                        origin=origin_poi,
-                        destination=destination_poi,
-                        itinerary=itinerary,
-                        # TODO: each transportation Method from Google api (driving, walking, bicycling, transit)
-                        method=ItineraryStep.METHOD_CHOICES.CAR,
-                    )
-                    driving_duration = dmx_driving['rows'][0]['elements'][0]['duration']['value']
-                    driving_it_step.duration = driving_duration
-                    driving_it_step.save()
+                    # Call Google distance matrix with user's parameters
+                    if transporation_methods:
+                        for key, value in transporation_methods.items():
+                            if value:
+                                method_choice = {
+                                    'walking':ItineraryStep.METHOD_CHOICES.WALK,
+                                    'driving':ItineraryStep.METHOD_CHOICES.CAR,
+                                }
+                                dmx = gmaps.distance_matrix(
+                                    origins='place_id:{}'.format(origin['place_id']),
+                                    destinations='place_id:{}'.format(destination['place_id']),
+                                    mode=key,
+                                    language="english"
+                                )
+                                print("End of the API call.")
+                                it_step = ItineraryStep.objects.create(
+                                    origin=origin_poi,
+                                    destination=destination_poi,
+                                    itinerary=itinerary,
+                                    # TODO: (driving, walking, bicycling, transit)
+                                    method=method_choice[key]
+                                )
+                                duration = dmx['rows'][0]['elements'][0]['duration']['value']
+                                it_step.duration = duration
+                                it_step.save()
 
                 # To DEBUG remove comments
                 # else:
@@ -215,12 +217,12 @@ class PlacesOfInterestView(FormView):
         # one liner to print steps just to verify
         # [print(step) for step in itinerary.steps.all()]
         # create the string that will be embeded in the problem file.
-        file_contents = create_pddl_problem(itinerary,output_plan=False)
+        file_contents = create_pddl_problem(itinerary, awaken_times, output_plan=False)
         file_name = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
         # add contents to file.
         write_pddl_file(file_contents, file_name)
         try: 
-            plan = run_subprocess(itinerary.slug,sleep_for=10)
+            plan = run_subprocess(itinerary.slug,sleep_for=run_plan_for)
             plan_dict = convert_plan(plan)
         except TypeError:
             data = {
@@ -251,7 +253,7 @@ class PlacesOfInterestView(FormView):
             plan_dict[index[0]]['fromPlaceId']=current_step_qs.origin.place_id
             plan_dict[index[0]]['toPlaceId']=current_step_qs.destination.place_id
             current_step_qs.save()
-            print(current_step_qs.index,":",current_step_qs.origin,"->",current_step_qs.destination,":",current_step_qs.method)
+            print(current_step_qs.index,":",current_step_qs.origin,"->",current_step_qs.destination,":",current_step_qs.METHOD_CHOICES[current_step_qs.method])
         plan_json = json.dumps(plan_dict, ensure_ascii=False)
         if self.request.is_ajax():
             # Request is ajax, send a json response

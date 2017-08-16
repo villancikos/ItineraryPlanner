@@ -22,7 +22,9 @@ Usefl link for changing icons to google directions
 http://googlemaps.googlermania.com/google_maps_api_v3/en/map_example_direction_customicon.html
 
 ::::HACER:::
-Arreglar duplicado despues de correr con walking y driving
+DONE-Arreglar duplicado despues de correr con walking y driving
+Hacer delgados los paths y enviar el itinerario completo para manipular en frontend
+añadir tambien el filtrado de propiedades en METRICS
 QUITAR PINES DEL MAPA CUANDO LOS BORRE DEL SIDEBAR
 WANTED FEATURE: PONER MAPAS EN SIDEBAR CUANDO LES DAS CLICK EN EL MAPA.
 OJO: Se corrio el itinerary-6749591c-cab5-4e5d-b446-895e74170b82

@@ -97,14 +97,49 @@ def unique_slugify(instance, value, slug_field_name='slug', queryset=None,
 
     setattr(instance, slug_field.attname, slug)
 
+def convert_times_for_planner(time):
+    """
+    This function transforms regular military time
+    to a relative time for the planner.
+    
+    i.e. time = 0800
+    new_time = (0800/100)*60 == 480
+    """
+    try:
+        new_time = (int(time)/100)*60
+    except ValueError:
+        new_time = 480 # default value for 8 AM
+    return new_time
 
-def create_pddl_problem(itinerary,output_plan=False):
+def convert_time_to_military(time):
+    """
+    This method converts back a planner timing to 
+    the military time so we can use it for displaying
+    purposes.
+    i.e. time = 480
+    new_time = (480/60)*100 == 800
+    """
+    try:
+        new_time = (int(time)/60)*100
+    except ValueError:
+        new_time = 800
+    return new_time
+
+def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
     """ Helper function that forms the pddl file of th given itinerary.
     The customization in each pddl file will be created using the
     preferences properties inside the Preference table attached to each
     itinerary (i.e. each itinerary contains preferences at least for
     one place and at most one for each of the places involced)
     """
+    try:
+        awaken = convert_times_for_planner(awaken_times['awaken'])
+    except ValueError:
+        awaken = 480 # 800 (8:00 AM) == (800/100)*60
+    try:
+        not_awaken = convert_times_for_planner(awaken_times['not_awaken'])
+    except ValueError:
+        not_awaken = 1380 # 2300 (11:00 PM) == (2300/100)*60
     tabs = {
         1: '\t',
         2: '\t\t',
@@ -121,7 +156,9 @@ def create_pddl_problem(itinerary,output_plan=False):
     header = "(define (problem itinerary-{})\n\
         (:domain touristinfo)".format(itinerary.slug)
     objects = "\n\t(:objects "
-    init = "\t(:init \n \t\t (at 480 (awake tourist1))\n(at 1380 (not(awake tourist1)))\n"
+    awake = "(at {} (awake tourist1))".format(awaken)
+    not_awake = "(at {} (not (awake tourist1)))".format(not_awaken)
+    init = "\t(:init \n \t\t{}\n\t\t{}\n".format(awake, not_awake)
     times = ""
     goals = "{0}(:goal\n{1}(and\n".format(tabs[1], tabs[2])
     if initial_location:

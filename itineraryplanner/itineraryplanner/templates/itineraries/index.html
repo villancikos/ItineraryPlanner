@@ -35,6 +35,16 @@
                             <button id="clearPlaces" class="btn-block" type="button">Remove All</button>
                         </div>                        
                     </div>
+                    <div class="row awakeTimes">
+                        <div class="col-6">
+                            <label for="wakeUpTime">Wake Up Time</label>
+                            <input class="wakeUpTime inputMask" name="wakeUpTime" type="text" size="6"/>
+                        </div>
+                        <div class="col-6">
+                            <label for="sleepTime">Go To Bed</label>
+                            <input class="sleepTime inputMask" name="sleepTime" type="text" size="6"/>
+                        </div>                        
+                    </div>
                     <div id="searchedPlaces">
                     </div>
                 </form>
@@ -76,6 +86,7 @@
     <script type="text/javascript" src="{% static 'js/moment.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap/tether/tether.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/bootstrap/bootstrap.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jquery.inputmask.bundle.js' %}"></script>  
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB62WXl60F8rx74hDmKjj_sBJRwu5Wgnlo&libraries=places"></script>
     {% comment %}
     <script type="text/javascript" src="{% static 'js/itineraryPicker.js' %}"></script>{% endcomment %}
@@ -83,11 +94,14 @@
         var $loading = $('#loadingDiv').hide();
         $(document)
             .ajaxStart(function () {
-            $loading.show();
+                $loading.show();
             })
             .ajaxStop(function () {
-            $loading.hide();
-            });
+                $loading.hide();
+            }).ready(function(){
+                $('.inputMask').inputmask({"mask": "99:99hrs"}); //specifying options
+              });
+        // Input Mask plugin info
         var successURL = "{{success_url}}";
         var distanceMatrix = [];
         var mapInitialLocation = {
@@ -244,6 +258,7 @@
         $('#placesSelectedForm').on('submit', function (e) {
             e.preventDefault();
             $myForm = JSON.stringify($(this).serializeArray());
+            var awakeTimes = $()
             // Preparing Preferences Dict 
             var preferenceDict = {};
             $( "#searchedPlaces ul" ).children().each(function(){ 
@@ -302,11 +317,6 @@
                 },
             });
         });
-
-        function drawRoute(json){
-            window.directionsService = new google.maps.DirectionsService;
-            calculateAndDisplayRoute(json);
-        }
         
         function getRandomColor() {
             var letters = '0123456789ABCDEF';
@@ -319,14 +329,15 @@
         function renderDirections(result) {
             var polylineOptionsActual = new google.maps.Polyline({
                 strokeColor: getRandomColor(),
-                strokeOpacity: 1.0,
-                strokeWeight: 10
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
             });
-            var directionsRenderer = new google.maps.DirectionsRenderer({suppressMarkers: true, polylineOptions: polylineOptionsActual});
-            directionsRenderer.setMap(map);
-            directionsRenderer.setDirections(result);
+            window.directionsRenderer = new google.maps.DirectionsRenderer({suppressMarkers: true, polylineOptions: polylineOptionsActual});
+            window.directionsRenderer.setMap(map);
+            window.directionsRenderer.setDirections(result);
         }
-        function calculateAndDisplayRoute(json) {
+        function drawRoute(json) {
+            window.directionsService = new google.maps.DirectionsService;
             planDict = JSON.parse(json['final_plan']);  
             directions = []; 
             Object.keys(planDict).forEach(function(key){
