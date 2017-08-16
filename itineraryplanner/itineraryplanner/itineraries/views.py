@@ -73,14 +73,16 @@ class PlacesOfInterestView(FormView):
         #places_to_visit_json = form.cleaned_data['placesToVisit']
         places_to_visit = json.loads(form.cleaned_data['placesToVisit'])
         preferences = json.loads(form.cleaned_data['preferences'])
-        properties = {'wakeUpTime':'0800', 
-                        'sleepTime': '2300',
-                        'runFor': '5',
-                       'methods':{
-                           'driving':True,
-                           'walking':True,
-                       } 
-        }
+        properties = json.loads(form.cleaned_data['properties'])
+        print("Printing Properties.\n",properties)
+        # properties = {'wakeUpTime':'0800', 
+        #                 'sleepTime': '2300',
+        #                 'runFor': '5',
+        #                'methods':{
+        #                    'driving':True,
+        #                    'walking':True,
+        #                } 
+        # }
         # Get the user preferente for running the Plan.
         # Make sure to get a Valid Int before hand, else parse a 5 second parameter.
         try:

@@ -35,14 +35,15 @@
                             <button id="clearPlaces" class="btn-block" type="button">Remove All</button>
                         </div>                        
                     </div>
+                    
                     <div class="row awakeTimes">
                         <div class="col-6">
                             <label for="wakeUpTime">Wake Up Time</label>
-                            <input class="wakeUpTime inputMask" name="wakeUpTime" type="text" size="6"/>
+                            <input class="wakeUpTime inputMask" name="wakeUpTime" type="text" size="6" required/>
                         </div>
                         <div class="col-6">
                             <label for="sleepTime">Go To Bed</label>
-                            <input class="sleepTime inputMask" name="sleepTime" type="text" size="6"/>
+                            <input class="sleepTime inputMask" name="sleepTime" type="text" size="6" requried/>
                         </div>                        
                     </div>
                     <div id="searchedPlaces">
@@ -99,7 +100,7 @@
             .ajaxStop(function () {
                 $loading.hide();
             }).ready(function(){
-                $('.inputMask').inputmask({"mask": "99:99hrs"}); //specifying options
+                $('.inputMask').inputmask("hh:mm"); //specifying options
               });
         // Input Mask plugin info
         var successURL = "{{success_url}}";
@@ -254,11 +255,24 @@
                 });
             });
         };
-
+        function breakOutTimes(time){
+            var timeArray = time.split(":");
+            var timeHours = timeArray[0];
+            var timeMinutes = timeArray[1];
+            return timeHours+timeMinutes
+        }
         
         // Listener for the submit inside the sidebar list with selectedPlaces.
         $('#placesSelectedForm').on('submit', function (e) {
             e.preventDefault();
+            var properties = {}
+            var sleepAt = breakOutTimes($('.sleepTime').val())
+            var wakeUpAt = breakOutTimes($('.wakeUpTime').val())
+            properties['sleepTime'] = sleepAt;
+            properties['wakeUpTime'] = wakeUpAt;
+            properties['runFor'] = 5;
+            properties['methods'] = {'driving': true, 'walking': true }
+            var toSubmitProperties = JSON.stringify(properties);
             $myForm = JSON.stringify($(this).serializeArray());
             var awakeTimes = $()
             // Preparing Preferences Dict 
@@ -304,12 +318,16 @@
             $.ajax({
                 type: "POST",
                 url: successURL,
-                data: { placesToVisit: toSubmitJsonList, preferences: toSubmitPreferences },
+                data: { 
+                    placesToVisit: toSubmitJsonList, 
+                    preferences: toSubmitPreferences,
+                    properties: toSubmitProperties    
+                },
                 success: function (json) {
                     // What we receive from success on server side.
                     console.log("success!");
                     console.log(json);
-                    drawRoute(json);                    
+                    drawRoute(json);                 
                     $("#submitPlaceSelection").attr("disabled", false);
                 },
                 error: function (json) {
@@ -399,8 +417,6 @@
                             )
                             directionRenderer.setDirections(response)
                             directionsRendererList.push(directionRenderer);
-                            console.log("Here comes the renderer List...........................")                            
-                            console.log(directionsRendererList)
                             //renderDirections(response);
                         } else {
                             window.alert('Directions request failed due to ' + status);
