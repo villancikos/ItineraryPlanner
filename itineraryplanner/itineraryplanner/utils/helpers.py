@@ -121,7 +121,7 @@ def create_pddl_problem(itinerary,output_plan=False):
     header = "(define (problem itinerary-{})\n\
         (:domain touristinfo)".format(itinerary.slug)
     objects = "\n\t(:objects "
-    init = "\t(:init \n"
+    init = "\t(:init \n \t\t (at 480 (awake tourist1))\n(at 1380 (not(awake tourist1)))\n"
     times = ""
     goals = "{0}(:goal\n{1}(and\n".format(tabs[1], tabs[2])
     if initial_location:
@@ -170,9 +170,9 @@ def create_pddl_problem(itinerary,output_plan=False):
             if opens and closes:
                 # Normal Escenario with opening and closing times
                 times += "{0}(at {1} (open {2}))\n".format(
-                    tabs[2], opens, slug)
+                    tabs[2], (int(opens)/100)*60, slug)
                 times += "{0}(at {1} (not (open {2})))\n".format(
-                    tabs[2], closes, slug)
+                    tabs[2], (int(closes)/100)*60, slug)
             elif opens:
                 # scenario where place opens 24 hours so no closing.
                 if opens == '0000':
@@ -283,7 +283,8 @@ def run_subprocess(itinerary_slug, sleep_for=None, domain_file=None):
         sleep_for = 2.0
     problem_file = APPS_DIR + "/pddl_files/user_files/itinerary-{}.pddl".format(itinerary_slug)
     if not domain_file:
-        domain_file = APPS_DIR + "/pddl_files/domain.pddl"
+        # domain_file = APPS_DIR + "/pddl_files/domain.pddl"
+        domain_file = APPS_DIR + "/pddl_files/domain_with_awake.pddl"
     commands = ['optic-cplex',
                 domain_file,
                 problem_file]
