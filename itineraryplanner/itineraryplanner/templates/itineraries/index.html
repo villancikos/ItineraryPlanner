@@ -481,8 +481,8 @@
                 var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt',checked: beChecked , value: $place_id});            
             }
             else{
-                var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt', value: "endAt-"+$place_id});
-                var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt', value: "endAt-"+$place_id });
+                var $inputForStartAt = $('<input>', { type: 'radio', name: 'startAt', value: $place_id});
+                var $inputForEndAt = $('<input>', { type: 'radio', name: 'endAt', value: $place_id });
             }
             $inputForStartAt.addClass('startAtInput');
             $inputForEndAt.addClass('endAtInput');

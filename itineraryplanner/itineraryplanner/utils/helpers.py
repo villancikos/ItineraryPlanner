@@ -117,7 +117,7 @@ def create_pddl_problem(itinerary,output_plan=False):
     places = itinerary.get_itinerary_places()
     steps = itinerary.steps.all()
     travel_methods = itinerary.get_all_travel_methods()
-    print("............creating objects....")
+    print("............creating plan....")
     header = "(define (problem itinerary-{})\n\
         (:domain touristinfo)".format(itinerary.slug)
     objects = "\n\t(:objects "
@@ -194,8 +194,8 @@ def create_pddl_problem(itinerary,output_plan=False):
             # the user may say a place is a MUST in his list.
             # Therefore we evauate these preferences.
             if place_preferences.must_visit:
-                goals += "{0}(preference {1} (visited tourist1 {2}))\n".format(
-                    tabs[3], camel_case, slug)
+                # goals += "{0}(preference {1} (visited tourist1 {2}))\n".format(
+                #     tabs[3], camel_case, slug)
                 metrics += "{0}(is-violated {1})\n".format(tabs[5], camel_case)
 
     visit_for += "\t)\n"  # ending of visit_for
@@ -203,7 +203,7 @@ def create_pddl_problem(itinerary,output_plan=False):
     constraints += "{0})\n{1})".format(tabs[2], tabs[1])
     metrics += "{0})\n{1})\n{2})\n{3})\n)".format(
         tabs[4], tabs[3], tabs[2], tabs[1])
-    objects += " - location tourist1 - tourist bus walk - mode)\n"
+    objects += " - location tourist1 - tourist car bus tube walk - mode)\n"
     # print(header, objects, init, times, tourist_starting_location,
     #      paths, traveltimes, visit_for, goals, constraints, metrics)
     file_contents = header + objects + init + times + tourist_starting_location + \

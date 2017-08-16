@@ -8,16 +8,15 @@ server to compute the desired TOUR.
 # pylint: disable=E1101
 import json
 import re
-from random import randrange
-
 import googlemaps
 from django.core.urlresolvers import reverse_lazy
 from django.http import HttpResponse, JsonResponse
 from django.views.generic.edit import FormView
 
+from ..utils.helpers import (convert_plan, create_pddl_problem, run_subprocess,
+                             write_pddl_file)
 from .forms import PlacesOfInterestForm
 from .models import Itinerary, ItineraryStep, PlaceOfInterest, Preferences
-from ..utils.helpers import create_pddl_problem, write_pddl_file,run_subprocess,convert_plan
 
 #gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
 gmaps = googlemaps.Client(key='AIzaSyAxJ5w-FZlmrRB6VGyQdD2U18Oqr0QTLxs')
@@ -67,7 +66,6 @@ class PlacesOfInterestView(FormView):
         return super(PlacesOfInterestView, self).form_invalid(form)
 
     def form_valid(self, form):
-        #import ipdb;ipdb.set_trace()
         response = super(PlacesOfInterestView, self).form_valid(form)
         # This method is called when valid form data has been POSTed.
         # It should return an HttpResponse.
@@ -75,10 +73,6 @@ class PlacesOfInterestView(FormView):
         #places_to_visit_json = form.cleaned_data['placesToVisit']
         places_to_visit = json.loads(form.cleaned_data['placesToVisit'])
         preferences = json.loads(form.cleaned_data['preferences'])
-        print(preferences)
-        for key,value in preferences.items():
-            print(key, value)
-        
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
         created_places = []
@@ -121,17 +115,27 @@ class PlacesOfInterestView(FormView):
             # print(obj, ", was created?: ", created)
         # Create an Itinerary Object to hold the tour.
         itinerary = Itinerary()
-        # TODO: Remove this default initial place of interest.
-        # in the near future we want the user to select his desired starting point
-        # e.g. the HOTEL or another initial Place of Interest
-        random_place = created_places[randrange(0, len(created_places))]
-        itinerary.initialPOI = random_place
+        # Initialize start and end at variables to store the itinerary initial and ending
+        start_at = ''
+        end_at = ''
+        # get the mentioned places from the preferences
+        for key,value in preferences.items():
+            if value['startAt']!=False:
+                start_at = value['startAt']
+            if value['endAt']!=False:
+                end_at = value['endAt']
+        # set the initial and ending POI
+        itinerary.initialPOI = PlaceOfInterest.objects.get(place_id=start_at)
+        itinerary.endingPOI = PlaceOfInterest.objects.get(place_id=end_at)
         itinerary.save()
         for place in created_places:
+            visit_for = preferences[place.place_id]['visitFor']
+            priority = preferences[place.place_id]['priority']
             Preferences.objects.create(
                 itinerary=itinerary,
                 place=place,
-                visitFor=randrange(30, 90)
+                visitFor=visit_for,
+                priority=priority,
             )
         # TODO: Fix this as it runs more than needed.
         # Traverse all the possible origins
@@ -150,14 +154,20 @@ class PlacesOfInterestView(FormView):
                         # TODO: each transportation Method from Google api (driving, walking, bicycling, transit)
                         method=ItineraryStep.METHOD_CHOICES.WALK
                     )
-                    '''
+                    print("Calling Google for Distance Matrix...")
                     dmx = gmaps.distance_matrix(
                         origins='place_id:{}'.format(origin['place_id']),
                         destinations='place_id:{}'.format(destination['place_id']),
                         mode="walking",
                         language="english"
                     )
-                    '''
+                    dmx_driving = gmaps.distance_matrix(
+                        origins='place_id:{}'.format(origin['place_id']),
+                        destinations='place_id:{}'.format(destination['place_id']),
+                        mode="driving",
+                        language="english"
+                    )
+                    print("End of the call.")
                     # Testing using different mode (transit)
                     # dmy = gmaps.distance_matrix(
                     #     origins='place_id:{}'.format(origin['place_id']),
@@ -165,15 +175,26 @@ class PlacesOfInterestView(FormView):
                     #     mode='transit',
                     #     language="english")
                     # print(dmy)
-                    #duration = dmx['rows'][0]['elements'][0]['duration']['value']
+                    duration = dmx['rows'][0]['elements'][0]['duration']['value']
                     #duration = 10
-                    #it_step.duration = duration
-                    #it_step.save()
+                    it_step.duration = duration
+                    it_step.save()
+                    driving_it_step = ItineraryStep.objects.create(
+                        origin=origin_poi,
+                        destination=destination_poi,
+                        itinerary=itinerary,
+                        # TODO: each transportation Method from Google api (driving, walking, bicycling, transit)
+                        method=ItineraryStep.METHOD_CHOICES.CAR,
+                    )
+                    driving_duration = dmx_driving['rows'][0]['elements'][0]['duration']['value']
+                    driving_it_step.duration = driving_duration
+                    driving_it_step.save()
 
                 # To DEBUG remove comments
                 # else:
                 #     print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
 
+        '''
         all_distances = itinerary.get_distance_matrix_places_format()
         dmx = gmaps.distance_matrix(
             origins=all_distances,
@@ -190,6 +211,7 @@ class PlacesOfInterestView(FormView):
                     it_step.save()
                     #print("FROM ", outer[1][9:]," TO ",inner[1][9:])
                     #print(dmx['rows'][outer[0]]['elements'][inner[0]]['duration']['value'])
+        '''
         # one liner to print steps just to verify
         # [print(step) for step in itinerary.steps.all()]
         # create the string that will be embeded in the problem file.
@@ -198,7 +220,7 @@ class PlacesOfInterestView(FormView):
         # add contents to file.
         write_pddl_file(file_contents, file_name)
         try: 
-            plan = run_subprocess(itinerary.slug,sleep_for=2)
+            plan = run_subprocess(itinerary.slug,sleep_for=10)
             plan_dict = convert_plan(plan)
         except TypeError:
             data = {
@@ -212,6 +234,7 @@ class PlacesOfInterestView(FormView):
             return JsonResponse(data, status=400)
         #submittable = plan_dict
         for index in enumerate(plan_dict):
+            # to do, fix mistake with file 
             current_step_qs = itinerary.steps.all().filter(
                 origin__slug=plan_dict[index[0]]['from']
             ).filter(
