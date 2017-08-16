@@ -105,6 +105,8 @@ def convert_times_for_planner(time):
     i.e. time = 0800
     new_time = (0800/100)*60 == 480
     """
+    # TODO: Cases when closes at next day in the morning.
+    # Like Maughan at 0100.
     try:
         new_time = (int(time)/100)*60
     except ValueError:
@@ -158,7 +160,7 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
     objects = "\n\t(:objects "
     awake = "(at {} (awake tourist1))".format(awaken)
     not_awake = "(at {} (not (awake tourist1)))".format(not_awaken)
-    init = "\t(:init \n \t\t{}\n\t\t{}\n".format(awake, not_awake)
+    init = "\t(:init \n {}{}\n{}{}\n".format(tabs[2], awake,tabs[2], not_awake)
     times = ""
     goals = "{0}(:goal\n{1}(and\n".format(tabs[1], tabs[2])
     if initial_location:

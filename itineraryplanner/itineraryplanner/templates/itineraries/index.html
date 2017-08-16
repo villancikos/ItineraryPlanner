@@ -329,9 +329,13 @@
         function renderDirections(result) {
             var polylineOptionsActual = new google.maps.Polyline({
                 strokeColor: getRandomColor(),
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
+                strokeOpacity: 0.6,
+                strokeWeight: 4,
             });
+            //if (window.directionsRenderer != null) {
+            //    directionsRenderer.setMap(null);
+            //    directionsRenderer = null;
+            //}
             window.directionsRenderer = new google.maps.DirectionsRenderer({suppressMarkers: true, polylineOptions: polylineOptionsActual});
             window.directionsRenderer.setMap(map);
             window.directionsRenderer.setDirections(result);
@@ -778,7 +782,8 @@
                     indexToRemove = index;
                 }
             });
-
+            google.maps.event.clearInstanceListeners(markers[indexToRemove]);
+            markers[indexToRemove].setMap(null);
             // Remove the marker from Markers List
             markers.splice(indexToRemove, 1);
             // Remove place from SidebarList.
@@ -787,7 +792,7 @@
             // Remove place from PlacesSelected List
             var indexToRemovePlaces = null;
             placesSelected.forEach( function(place, index){
-                if (placesSelected.place_id === placeId){
+                if (place.place_id === placeId){
                     indexToRemovePlaces = index;
                 }
             });
