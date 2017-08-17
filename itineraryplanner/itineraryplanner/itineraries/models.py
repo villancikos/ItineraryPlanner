@@ -206,8 +206,8 @@ class ItineraryStep(TimeStampedModel):
         ordering = ["index", "created"]
 
     def __str__(self):
-        return 'Itinerary step from {0} to {1}. Method: {2}. Duration:{3}\n'.format(
-            self.origin, self.destination, self.METHOD_CHOICES[self.method], self.duration)
+        return 'Itinerary step from {0} to {1}. Method: {2}. Duration:{3}. Index:{4}\n'.format(
+            self.origin, self.destination, self.METHOD_CHOICES[self.method], self.duration, self.index)
 
 
 class Preferences(TimeStampedModel):
@@ -249,9 +249,12 @@ class Preferences(TimeStampedModel):
         choices=PRIORITY_CHOICES,
         default=PRIORITY_CHOICES.LOW,
     )
+    index = models.PositiveSmallIntegerField(
+        default=32767,
+    )
     class Meta:
         verbose_name = _("Itinerary Preference")
         verbose_name_plural= _("Itinerary Preferences")
 
     def __str__(self):
-        return 'Visit {0} for {1}mins on Itinerary:{2}'.format(self.place,self.visitFor, self.itinerary.slug)
+        return 'Index {0}. Visit {1} for {2}mins on Itinerary:{3}'.format(self.index, self.place,self.visitFor, self.itinerary.slug)

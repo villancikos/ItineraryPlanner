@@ -217,7 +217,9 @@ class PlacesOfInterestView(FormView):
         # add contents to file.
         write_pddl_file(file_contents, file_name)
         try: 
+            # run optic, save output to a txt file and pass the final plan to plan var.
             plan = run_subprocess(itinerary.slug,sleep_for=run_plan_for)
+            # from the plan variable convert the plan to an actual python dictionary.
             plan_dict = convert_plan(plan)
         except TypeError:
             data = {
@@ -229,10 +231,30 @@ class PlacesOfInterestView(FormView):
                 'message':'The server didn\'t come up with a feasible plan, sorry!'
             }
             return JsonResponse(data, status=400)
+        """
+        Example of Dict that we will generate.
+        {0: 
+            {'index': 0, 
+            'visitFor': '30', 
+            'place': 'place_id'}
+        },
+        {1:
+            {'index': 1,
+            'visitFor': '40',
+            'place': 'place_id'}
+        }
+
+        for index in enumerate(visit_plan_dict):
+            place_preference = itinerary.itinerary_preference.filter(
+                place__slug=visit_plan_dict[index[0]]
+            ).get()
+            place_preference.index = visit_plan_dict[index[0]]['index']
+            place_preference.save()
+        """
         for index in enumerate(plan_dict):
             method_string = plan_dict[index[0]]['method'].upper()
             method_value = getattr(ItineraryStep.METHOD_CHOICES,method_string)
-            current_step_qs = itinerary.steps.all().filter(
+            current_step_qs = itinerary.steps.filter(
                 origin__slug=plan_dict[index[0]]['from']
             ).filter(
                 destination__slug=plan_dict[index[0]]['to']
