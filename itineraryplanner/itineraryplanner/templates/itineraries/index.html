@@ -138,6 +138,13 @@
         // debugger;
         // var csrftoken = Cookies.get('csrftoken');
         // initializing Map
+        // dictionary to transalte values for transportation methods
+        transporation_equivalences =  {
+            'walk':'WALKING',
+            'bike':'BICYCLING',
+            'car':'DRIVING',
+            'tube':'TRANSIT'
+        }
         map = new google.maps.Map(document.getElementById("map"), {
             center: mapInitialLocation,
             zoom: 15,
@@ -364,7 +371,7 @@
                 success: function (json) {
                     // What we receive from success on server side.
                     console.log("success!");
-                    console.log(json);
+                    console.log(JSON.parse(json['final_plan']));
                     drawRoute(json);                 
                     $("#submitPlaceSelection").attr("disabled", false);
                 },
@@ -411,6 +418,7 @@
 
 
         function drawRoute(json) {
+            //debugger;
             window.directionsService = new google.maps.DirectionsService;
             planDict = JSON.parse(json['final_plan']);  
             directions = []; 
@@ -421,47 +429,52 @@
             });
             directionsRendererList=[];
             Object.keys(planDict).forEach(function(key){
-                var fromPlaceId = planDict[key]['fromPlaceId']
-                var toPlaceId =planDict[key]['toPlaceId']
-                var fromLocation = null;
-                var toLocation = null;
-                placesSelected.forEach(function(element){
-                    if (element.place_id === fromPlaceId){
-                        fromLocation = element.geometry.location;
-                    }
-                    if (element.place_id === toPlaceId){
-                        toLocation = element.geometry.location;
-                    }
-                });
-                window.directionsService.route({
-                    origin: fromLocation,
-                    destination: toLocation,
-                    travelMode: google.maps.TravelMode['WALKING']
-                    }, function(response, status) {
-                        if (status === 'OK') {
-                            //window.directionsDisplay.setDirections(response);
-                            directions.push(response);  
-                            // create a polyline with random color
-                            var polylineOptionsActual = new google.maps.Polyline({
-                                strokeColor: getRandomColor(),
-                                strokeOpacity: 0.6,
-                                strokeWeight: 4,
-                            });
-                            // for each response create a new renderer object.
-                            var directionRenderer = new google.maps.DirectionsRenderer(
-                                { 
-                                    map: map,
-                                    suppressMarkers: true, 
-                                    polylineOptions: polylineOptionsActual 
-                                }
-                            )
-                            directionRenderer.setDirections(response)
-                            directionsRendererList.push(directionRenderer);
-                            //renderDirections(response);
-                        } else {
-                            window.alert('Directions request failed due to ' + status);
+                if (planDict[key]['method'] !== 'visit'){
+                    var fromPlaceId = planDict[key]['fromPlaceId'];
+                    var toPlaceId = planDict[key]['toPlaceId'];
+                    var method = planDict[key]['method'];
+                    var googleMethod = transporation_equivalences[method]
+                    var fromLocation = null;
+                    var toLocation = null;
+
+                    placesSelected.forEach(function(element){
+                        if (element.place_id === fromPlaceId){
+                            fromLocation = element.geometry.location;
                         }
-                });
+                        if (element.place_id === toPlaceId){
+                            toLocation = element.geometry.location;
+                        }
+                    });
+                    window.directionsService.route({
+                        origin: fromLocation,
+                        destination: toLocation,
+                        travelMode: google.maps.TravelMode[googleMethod]
+                        }, function(response, status) {
+                            if (status === 'OK') {
+                                //window.directionsDisplay.setDirections(response);
+                                directions.push(response);  
+                                // create a polyline with random color
+                                var polylineOptionsActual = new google.maps.Polyline({
+                                    strokeColor: getRandomColor(),
+                                    strokeOpacity: 0.6,
+                                    strokeWeight: 4,
+                                });
+                                // for each response create a new renderer object.
+                                var directionRenderer = new google.maps.DirectionsRenderer(
+                                    { 
+                                        map: map,
+                                        suppressMarkers: true, 
+                                        polylineOptions: polylineOptionsActual 
+                                    }
+                                )
+                                directionRenderer.setDirections(response)
+                                directionsRendererList.push(directionRenderer);
+                                //renderDirections(response);
+                            } else {
+                                window.alert('Directions request failed due to ' + status);
+                            }
+                    });
+                }
                 //window.directionsDisplay.setDirections(directions);
             });
             

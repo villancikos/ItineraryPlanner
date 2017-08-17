@@ -97,7 +97,7 @@ def unique_slugify(instance, value, slug_field_name='slug', queryset=None,
 
     setattr(instance, slug_field.attname, slug)
 
-def convert_times_for_planner(time):
+def convert_times_for_planner(time, is_close=False):
     """
     This function transforms regular military time
     to a relative time for the planner.
@@ -107,10 +107,19 @@ def convert_times_for_planner(time):
     """
     # TODO: Cases when closes at next day in the morning.
     # Like Maughan at 0100.
+    # TODO: URGENT CHANGE FOR MADRUGADA
     try:
-        new_time = (int(time)/100)*60
+        new_time = int(time)
+        if is_close:
+            # cases when closes after midnight
+            if new_time < 1000:
+                new_time = 2400 
+        new_time = (int(new_time)/100)*60
     except ValueError:
-        new_time = 480 # default value for 8 AM
+        if is_close:
+            new_time = 1440
+        else:
+            new_time = 480 # default value for 8 AM
     return new_time
 
 def convert_time_to_military(time):
@@ -178,6 +187,34 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
     constraints = "{0}(:constraints\n{1}(and\n".format(tabs[1], tabs[2])
     metrics = "\n{0}(:metric minimize\n{1}(+\n{2}(total-time)\n{3}(* {4}\
     \n{5}(+\n".format(tabs[1], tabs[2], tabs[3], tabs[3], 1000, tabs[4])
+
+
+    ## Code for metrics...
+    """
+    (:metric minimize
+        (+
+            (total-time)
+            (
+                * VALUE 
+                (+
+                   (preference 1)
+                   (preference 2)
+                   (preference 3)
+                )
+                * VALUE 
+                (+
+                    (preference 4)
+                    (preference 5)
+                    (preference 6)
+
+                )
+            )
+        )
+    )
+    """
+
+
+
     for step in steps:
         # first we get the paths
         # if step.origin.slug != place:
@@ -209,9 +246,9 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
             if opens and closes:
                 # Normal Escenario with opening and closing times
                 times += "{0}(at {1} (open {2}))\n".format(
-                    tabs[2], (int(opens)/100)*60, slug)
+                    tabs[2], convert_times_for_planner(opens), slug)
                 times += "{0}(at {1} (not (open {2})))\n".format(
-                    tabs[2], (int(closes)/100)*60, slug)
+                    tabs[2], convert_times_for_planner(closes,True), slug)
             elif opens:
                 # scenario where place opens 24 hours so no closing.
                 if opens == '0000':
@@ -276,38 +313,88 @@ def convert_plan(plan):
     and both the index (order in which the planner suggest to visit the place)
     and the duration of the 'task' as values.
     """
-    # import pdb;pdb.set_trace()
     instruction_set = {}
+    #visit_set = {}
     # Using python raw string to avoid multiple escape chars '/'.
-    # import ipdb;ipdb.set_trace()
     regex = re.compile(
         r"^\d+.\d+: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$", re.MULTILINE)
     find_goals = re.compile(r"(?<=; Plan found with metric )\d+.\d+",re.MULTILINE)
     last_result_index = None
-    # TODO: Improve this iteration as right now seems prone to errors.
-    
+    # TODO: Improve this iteration as right now seems overkilling.
     for last_result_index in find_goals.finditer(plan):
         pass
     if not last_result_index:
         raise(TypeError)
     planner_steps = regex.findall(plan,last_result_index.span()[1])
     counter = 0
-    for instruction in planner_steps:
-        moving_instruction = re.findall(r"\(move.+\)", instruction)
-        print("Moving Instructions: ", moving_instruction)
-        for move in moving_instruction:
+    # Doing a manual if/else for move or visit properties.
+    for step in planner_steps:
+        moving_instruction = re.findall(r"\(move.+\)", step)
+        visit_instruction = re.findall(r"\(visit.+\)", step)
+        if ((len(moving_instruction) > 0) and (len(visit_instruction) == 0)):
+            # let's do a moving instruction
             splitter = []  #  will hold each bit of each instruction
-            starting = move.find("(") + 1
-            ending = move.find(")")
-            splitter = move[starting:ending].split()
+            starting = moving_instruction[0].find("(") + 1
+            ending = moving_instruction[0].find(")")
+            splitter = moving_instruction[0][starting:ending].split()
             instruction_set[counter] = {
                 'method': splitter[-1],
                 'from': splitter[-3],
                 'to': splitter[-2],
                 'index': counter,
             }
-            counter = counter+1
-    print(instruction_set)
+            counter += 1
+        elif ((len(visit_instruction) > 0) and (len(moving_instruction) == 0)):
+            # means that we are doing a visit instruction
+            splitter = []
+            starting = visit_instruction[0].find("(") + 1
+            ending = visit_instruction[0].find(")")
+            splitter = visit_instruction[0][starting:ending].split()
+            instruction_set[counter] = {
+                'method': 'visit',
+                'place': splitter[-1],
+                'index': counter,
+            }
+            counter += 1
+        else:
+            print("Both instruction cases were false ...\n???????????? ")
+        print(splitter)
+
+
+
+    
+    # for instruction in planner_steps:
+    #     moving_instruction = re.findall(r"\(move.+\)", instruction)
+    #     print("Moving Instructions: ", moving_instruction)
+    #     for move in moving_instruction:
+    #         splitter = []  #  will hold each bit of each instruction
+    #         starting = move.find("(") + 1
+    #         ending = move.find(")")
+    #         splitter = move[starting:ending].split()
+    #         instruction_set[counter] = {
+    #             'method': splitter[-1],
+    #             'from': splitter[-3],
+    #             'to': splitter[-2],
+    #             'index': counter,
+    #         }
+    #         counter = counter+1
+    # print(instruction_set)
+
+    # visits_counter = 0
+    # for step in planner_steps:
+    #     visit_instruction = re.findall(r"\(visit.+\)", step)
+    #     print("Visiting Instructions: ", visit_instruction)
+    #     for visit in visit_instruction:
+    #         splitter = []  #  will hold each bit of each instruction
+    #         starting = visit.find("(") + 1
+    #         ending = visit.find(")")
+    #         splitter = visit[starting:ending].split()
+    #         visit_set[visits_counter] = {
+    #             'index' : counter,
+    #             'place' : splitter[-1]
+    #         }
+    #         visits_counter +=1
+    #     print(visit_set)
     return instruction_set
 
 def run_subprocess(itinerary_slug, sleep_for=None, domain_file=None):
@@ -330,8 +417,11 @@ def run_subprocess(itinerary_slug, sleep_for=None, domain_file=None):
     proc = subprocess.Popen(commands, stdout=subprocess.PIPE)
     time.sleep(sleep_for)
     proc.terminate()
+    # put into the text variable the results from the console.
     text = proc.stdout.read().decode("UTF-8")
+    # freeze the output into a tangible file
     print(freeze_output_file(itinerary_slug,text))
+    # print the results to the console.
     pprint.pprint(text)
     return text
 

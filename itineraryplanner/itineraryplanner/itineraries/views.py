@@ -7,7 +7,9 @@ server to compute the desired TOUR.
 """
 # pylint: disable=E1101
 import json
+import pprint
 import re
+
 import googlemaps
 from django.core.urlresolvers import reverse_lazy
 from django.http import HttpResponse, JsonResponse
@@ -20,8 +22,6 @@ from .models import Itinerary, ItineraryStep, PlaceOfInterest, Preferences
 
 #gmaps = googlemaps.Client(key='AIzaSyBucexwP3IjpafwcJVPR3KtRnhqk-1sa00')
 gmaps = googlemaps.Client(key='AIzaSyAxJ5w-FZlmrRB6VGyQdD2U18Oqr0QTLxs')
-
-
 
 
 class PlacesOfInterestView(FormView):
@@ -83,7 +83,7 @@ class PlacesOfInterestView(FormView):
             'not_awaken': properties['sleepTime']
         }
         transporation_methods = properties['methods']
-        print("Printing Properties.\n",properties)
+        print("Printing Properties.\n", properties)
         print("Printing Run For.\n", run_plan_for)
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
@@ -131,10 +131,10 @@ class PlacesOfInterestView(FormView):
         start_at = ''
         end_at = ''
         # get the mentioned places from the preferences
-        for key,value in preferences.items():
-            if value['startAt']!=False:
+        for key, value in preferences.items():
+            if value['startAt'] != False:
                 start_at = value['startAt']
-            if value['endAt']!=False:
+            if value['endAt'] != False:
                 end_at = value['endAt']
         # set the initial and ending POI
         itinerary.initialPOI = PlaceOfInterest.objects.get(place_id=start_at)
@@ -164,9 +164,9 @@ class PlacesOfInterestView(FormView):
                         for key, value in transporation_methods.items():
                             if value:
                                 method_choice = {
-                                    'walking':ItineraryStep.METHOD_CHOICES.WALK,
+                                    'walking': ItineraryStep.METHOD_CHOICES.WALK,
                                     'bicycling': ItineraryStep.METHOD_CHOICES.BIKE,
-                                    'driving':ItineraryStep.METHOD_CHOICES.CAR,
+                                    'driving': ItineraryStep.METHOD_CHOICES.CAR,
                                     'transit': ItineraryStep.METHOD_CHOICES.TUBE,
                                 }
                                 dmx = gmaps.distance_matrix(
@@ -216,19 +216,19 @@ class PlacesOfInterestView(FormView):
         file_name = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
         # add contents to file.
         write_pddl_file(file_contents, file_name)
-        try: 
+        try:
             # run optic, save output to a txt file and pass the final plan to plan var.
-            plan = run_subprocess(itinerary.slug,sleep_for=run_plan_for)
+            plan = run_subprocess(itinerary.slug, sleep_for=run_plan_for)
             # from the plan variable convert the plan to an actual python dictionary.
             plan_dict = convert_plan(plan)
         except TypeError:
             data = {
-                'message':'An error occurred whilst running the itinerary.'
+                'message': 'An error occurred whilst running the itinerary.'
             }
             return JsonResponse(data, status=400)
         except:
             data = {
-                'message':'The server didn\'t come up with a feasible plan, sorry!'
+                'message': 'The server didn\'t come up with a feasible plan, sorry!'
             }
             return JsonResponse(data, status=400)
         """
@@ -252,23 +252,33 @@ class PlacesOfInterestView(FormView):
             place_preference.save()
         """
         for index in enumerate(plan_dict):
-            method_string = plan_dict[index[0]]['method'].upper()
-            method_value = getattr(ItineraryStep.METHOD_CHOICES,method_string)
-            current_step_qs = itinerary.steps.filter(
-                origin__slug=plan_dict[index[0]]['from']
-            ).filter(
-                destination__slug=plan_dict[index[0]]['to']
-            ##).get()
-            ).filter(
-                 method=method_value
-            ).get()
-            current_step_qs.index = plan_dict[index[0]]['index']
-            print(current_step_qs.origin.place_id)
-            print(current_step_qs.destination.place_id)
-            plan_dict[index[0]]['fromPlaceId']=current_step_qs.origin.place_id
-            plan_dict[index[0]]['toPlaceId']=current_step_qs.destination.place_id
-            current_step_qs.save()
-            print(current_step_qs.index,":",current_step_qs.origin,"->",current_step_qs.destination,":",current_step_qs.METHOD_CHOICES[current_step_qs.method])
+            current_index = index[0]
+            if plan_dict[current_index]['method'] == 'visit':
+                # we have a visit instruction, let's update properties.
+                place_preference = itinerary.itinerary_preference.filter(
+                    place__slug=plan_dict[current_index]['place']
+                ).get()
+                place_preference.index = plan_dict[current_index]['index']
+                place_preference.save()
+                # add Google's place_id to dictionary.
+                plan_dict[current_index]['visitPlaceId'] = place_preference.place.place_id
+            else:
+                # means we have a moving instruction.
+                method_string = plan_dict[current_index]['method'].upper()
+                method_value = getattr(ItineraryStep.METHOD_CHOICES, method_string)
+                current_step_qs = itinerary.steps.filter(
+                    origin__slug=plan_dict[current_index]['from']
+                ).filter(
+                    destination__slug=plan_dict[current_index]['to']
+                ).filter(
+                    method=method_value
+                ).get()
+                current_step_qs.index = plan_dict[current_index]['index']
+                current_step_qs.save()
+                # add Google's place_id to dictionary.
+                plan_dict[current_index]['fromPlaceId'] = current_step_qs.origin.place_id
+                plan_dict[current_index]['toPlaceId'] = current_step_qs.destination.place_id
+        pprint.pprint(plan_dict)
         plan_json = json.dumps(plan_dict, ensure_ascii=False)
         if self.request.is_ajax():
             # Request is ajax, send a json response
