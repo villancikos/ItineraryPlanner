@@ -460,14 +460,26 @@
                                     strokeWeight: 4,
                                 });
                                 // for each response create a new renderer object.
-                                var directionRenderer = new google.maps.DirectionsRenderer(
-                                    { 
-                                        map: map,
-                                        suppressMarkers: true, 
-                                        polylineOptions: polylineOptionsActual 
-                                    }
-                                )
-                                directionRenderer.setDirections(response)
+                                if (googleMethod = 'BICICLYNG'){
+                                    var directionRenderer = new google.maps.DirectionsRenderer(
+                                        { 
+                                            map: map,
+                                            suppressMarkers: true, 
+                                            polylineOptions: polylineOptionsActual,
+                                            suppressBicyclingLayer: true
+                                        }
+                                    )
+                                }
+                                else{
+                                    var directionRenderer = new google.maps.DirectionsRenderer(
+                                        { 
+                                            map: map,
+                                            suppressMarkers: true, 
+                                            polylineOptions: polylineOptionsActual,
+                                        }
+                                    )
+                                }
+                                directremove ionRenderer.setDirections(response)
                                 directionsRendererList.push(directionRenderer);
                                 //renderDirections(response);
                             } else {
