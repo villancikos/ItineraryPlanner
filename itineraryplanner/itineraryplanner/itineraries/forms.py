@@ -16,6 +16,19 @@ class PlacesOfInterestForm(forms.Form):
     preferences = forms.CharField()
     properties = forms.CharField()
 
+    def clean_properties(self):
+        import ipdb;ipdb.set_trace()
+        properties_raw = self.cleaned_data['properties']
+        try:
+            properties_json_data = json.loads(properties_raw)
+        except:
+            raise forms.ValidationError("Invalid property")
+        if properties_json_data['runFor'] > 50 or  properties_json_data['runFor'] <0:
+            properties_json_data['runFor'] = 5
+        properties = json.dumps(properties_json_data)
+        return properties
+
+
     def clean_places(self):
         """
         Although the django CharField validation will verify that the
@@ -42,6 +55,7 @@ class PlacesOfInterestForm(forms.Form):
         places_to_visit_raw = self.cleaned_data['placesToVisit']
         preferences_raw = self.cleaned_data['preferences']
         properties_raw = self.cleaned_data['properties']
+
         # distance_matrix_raw = self.cleaned_data['distanceMatrix']
 
         try:
@@ -49,7 +63,12 @@ class PlacesOfInterestForm(forms.Form):
             places_json_data = json.loads(places_to_visit_raw)
             preferences_json_data = json.loads(preferences_raw)
             properties_json_data = json.loads(properties_raw)
-            json_data.append(places_json_data,preferences_json_data,properties_json_data)
         except:
             raise forms.ValidationError("Invalid data in the Json")
+
+        if properties_json_data['runFor'] > 50 or  properties_json_data['runFor'] <0:
+            properties_json_data['runFor'] = 5
+            print("se limpio json data")
+            print(properties_json_data)
+        json_data.append(places_json_data,preferences_json_data,properties_json_data)
         return json_data

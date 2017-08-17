@@ -162,7 +162,7 @@ class ItineraryStep(TimeStampedModel):
     """
     METHOD_CHOICES = Choices(
         (0, 'WALK', 'walk'),
-        (1, 'BUS', 'bus'),
+        (1, 'BIKE', 'bike'),
         (2, 'CAR', 'car'),
         (3, 'TUBE', 'tube'),
     )

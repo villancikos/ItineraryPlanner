@@ -46,6 +46,17 @@
                             <input class="sleepTime inputMask" name="sleepTime" type="text" size="6" requried/>
                         </div>                        
                     </div>
+                    <div class="transportationMethod">
+                        <label for="driving">Car</label>
+                        <input class="drivingCbx" type="checkbox" name="driving" value="driving">
+                        <label for="walking">Walk</label>
+                        <input class="walkingCbx" type="checkbox" name="walking" value="walking">
+                        <label for="bicycling">Bike</label>
+                        <input class="bicyclingCbx" type="checkbox" name="bicycling" value="bicycling">
+                        <label for="transit">Transit</label>
+                        <input class="transitCbx" type="checkbox" name="transit" value="transit">
+
+                    </div>
                     <div id="searchedPlaces">
                     </div>
                 </form>
@@ -265,15 +276,31 @@
         // Listener for the submit inside the sidebar list with selectedPlaces.
         $('#placesSelectedForm').on('submit', function (e) {
             e.preventDefault();
+            // Section of the code to retrieve Properties.
             var properties = {}
+            var $transportationMethods = {
+                'driving':false,
+                'walking': false,
+                'bicycling': false,
+                'transit': false
+            }
             var sleepAt = breakOutTimes($('.sleepTime').val())
             var wakeUpAt = breakOutTimes($('.wakeUpTime').val())
             properties['sleepTime'] = sleepAt;
             properties['wakeUpTime'] = wakeUpAt;
-            properties['runFor'] = 5;
-            properties['methods'] = {'driving': true, 'walking': true }
+            properties['runFor'] = 105;
+            // Section of the code to retrieve transportation methods
+            $('.transportationMethod [type="checkbox"]').each(function(){
+                var name = $(this).attr('name');
+                var checked = $(this).prop('checked');
+                $transportationMethods[name]=checked;
+            });
+            console.log($transportationMethods);
+            properties['methods'] = $transportationMethods;
+            //properties['methods'] = {'driving': false, 'walking': true }            
+            //$myForm = JSON.stringify($(this).serializeArray());
             var toSubmitProperties = JSON.stringify(properties);
-            $myForm = JSON.stringify($(this).serializeArray());
+
             var awakeTimes = $()
             // Preparing Preferences Dict 
             var preferenceDict = {};
@@ -370,6 +397,8 @@
             //window.directionsRenderer.setMap(map);
             //window.directionsRenderer.setDirections(result);
         }
+
+
         function drawRoute(json) {
             window.directionsService = new google.maps.DirectionsService;
             planDict = JSON.parse(json['final_plan']);  
@@ -396,7 +425,7 @@
                 window.directionsService.route({
                     origin: fromLocation,
                     destination: toLocation,
-                    travelMode: 'WALKING'
+                    travelMode: google.maps.TravelMode['WALKING']
                     }, function(response, status) {
                         if (status === 'OK') {
                             //window.directionsDisplay.setDirections(response);

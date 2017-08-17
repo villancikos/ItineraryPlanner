@@ -74,19 +74,13 @@ class PlacesOfInterestView(FormView):
         places_to_visit = json.loads(form.cleaned_data['placesToVisit'])
         preferences = json.loads(form.cleaned_data['preferences'])
         properties = json.loads(form.cleaned_data['properties'])
-        print("Printing Properties.\n",properties)
-        # properties = {'wakeUpTime':'0800', 
-        #                 'sleepTime': '2300',
-        #                 'runFor': '5',
-        #                'methods':{
-        #                    'driving':True,
-        #                    'walking':True,
-        #                } 
-        # }
         # Get the user preferente for running the Plan.
         # Make sure to get a Valid Int before hand, else parse a 5 second parameter.
         try:
             run_plan_for = int(properties['runFor'])
+            if (run_plan_for > 50 or run_plan_for < 0):
+                # protect the input and force it to 5 minutes
+                run_plan_for = 5
         except ValueError:
             run_plan_for = 5
         awaken_times = {
@@ -94,6 +88,7 @@ class PlacesOfInterestView(FormView):
             'not_awaken': properties['sleepTime']
         }
         transporation_methods = properties['methods']
+        print("Printing Properties.\n",properties, run_plan_for)
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
         created_places = []
@@ -174,7 +169,9 @@ class PlacesOfInterestView(FormView):
                             if value:
                                 method_choice = {
                                     'walking':ItineraryStep.METHOD_CHOICES.WALK,
+                                    'bicycling': ItineraryStep.METHOD_CHOICES.BIKE,
                                     'driving':ItineraryStep.METHOD_CHOICES.CAR,
+                                    'transit': ItineraryStep.METHOD_CHOICES.TUBE,
                                 }
                                 dmx = gmaps.distance_matrix(
                                     origins='place_id:{}'.format(origin['place_id']),
@@ -237,17 +234,15 @@ class PlacesOfInterestView(FormView):
             }
             return JsonResponse(data, status=400)
         for index in enumerate(plan_dict):
-            if plan_dict[index[0]]['method'] == 'car':
-                method = 2
-            if plan_dict[index[0]]['method'] == 'walk':
-                method = 0
+            method_string = plan_dict[index[0]]['method'].upper()
+            method_value = getattr(ItineraryStep.METHOD_CHOICES,method_string)
             current_step_qs = itinerary.steps.all().filter(
                 origin__slug=plan_dict[index[0]]['from']
             ).filter(
                 destination__slug=plan_dict[index[0]]['to']
             ##).get()
             ).filter(
-                 method=method
+                 method=method_value
             ).get()
             current_step_qs.index = plan_dict[index[0]]['index']
             print(current_step_qs.origin.place_id)

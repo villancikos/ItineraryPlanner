@@ -242,7 +242,7 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
     constraints += "{0})\n{1})".format(tabs[2], tabs[1])
     metrics += "{0})\n{1})\n{2})\n{3})\n)".format(
         tabs[4], tabs[3], tabs[2], tabs[1])
-    objects += " - location tourist1 - tourist car bus tube walk - mode)\n"
+    objects += " - location tourist1 - tourist walk car bike tube - mode)\n"
     # print(header, objects, init, times, tourist_starting_location,
     #      paths, traveltimes, visit_for, goals, constraints, metrics)
     file_contents = header + objects + init + times + tourist_starting_location + \
