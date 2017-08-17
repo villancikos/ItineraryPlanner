@@ -17,16 +17,40 @@ class PlacesOfInterestForm(forms.Form):
     properties = forms.CharField()
 
     def clean_properties(self):
-        import ipdb;ipdb.set_trace()
+        """ used to validate that the properies json
+        comes with all the needed properties.
+        The properties dictionary is expecting this:
+        {
+            "sleepTime":"2100",
+            "wakeUpTime":"0800",
+            "runFor":105,
+            "methods":{
+                "driving":true,
+                "walking":false,
+                "bicycling":false,
+                "transit":false
+            }
+        }
+        Thus, validation is needed as follows...
+        """
         properties_raw = self.cleaned_data['properties']
+        # try to get the json if not, then something is wrong.
         try:
             properties_json_data = json.loads(properties_raw)
         except:
             raise forms.ValidationError("Invalid property")
-        if properties_json_data['runFor'] > 50 or  properties_json_data['runFor'] <0:
-            properties_json_data['runFor'] = 5
+        # now clean the runFor parameter to avoid malicious code.
+        try:
+            run_for = int(properties_json_data['runFor'])
+            if (run_for > 60 or run_for < 0):
+                # default value to 5 to avoid overwhelming the server.
+                run_for = 5
+        except ValueError:
+            raise ValidationError("runFor parameter must be an int.")
+        properties_json_data['runFor'] = run_for
         properties = json.dumps(properties_json_data)
         return properties
+
 
 
     def clean_places(self):
@@ -51,7 +75,7 @@ class PlacesOfInterestForm(forms.Form):
             "lng":-0.14509050000003754
         } ...
         """
-        #TODO: Implement a cleansing method for the json
+        # TODO: Implement a cleansing method for the json
         places_to_visit_raw = self.cleaned_data['placesToVisit']
         preferences_raw = self.cleaned_data['preferences']
         properties_raw = self.cleaned_data['properties']
@@ -66,9 +90,10 @@ class PlacesOfInterestForm(forms.Form):
         except:
             raise forms.ValidationError("Invalid data in the Json")
 
-        if properties_json_data['runFor'] > 50 or  properties_json_data['runFor'] <0:
+        if properties_json_data['runFor'] > 50 or properties_json_data['runFor'] < 0:
             properties_json_data['runFor'] = 5
             print("se limpio json data")
             print(properties_json_data)
-        json_data.append(places_json_data,preferences_json_data,properties_json_data)
+        json_data.append(places_json_data,
+                         preferences_json_data, properties_json_data)
         return json_data

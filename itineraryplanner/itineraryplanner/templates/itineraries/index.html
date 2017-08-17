@@ -39,23 +39,28 @@
                     <div class="row awakeTimes">
                         <div class="col-6">
                             <label for="wakeUpTime">Wake Up Time</label>
-                            <input class="wakeUpTime inputMask" name="wakeUpTime" type="text" size="6" required/>
+                            <input class="wakeUpTime inputMask" name="wakeUpTime" type="text" size="6" value="08:00" required/>
                         </div>
                         <div class="col-6">
                             <label for="sleepTime">Go To Bed</label>
-                            <input class="sleepTime inputMask" name="sleepTime" type="text" size="6" requried/>
+                            <input class="sleepTime inputMask" name="sleepTime" type="text" size="6" value="21:00" requried/>
                         </div>                        
                     </div>
-                    <div class="transportationMethod">
-                        <label for="driving">Car</label>
-                        <input class="drivingCbx" type="checkbox" name="driving" value="driving">
-                        <label for="walking">Walk</label>
-                        <input class="walkingCbx" type="checkbox" name="walking" value="walking">
-                        <label for="bicycling">Bike</label>
-                        <input class="bicyclingCbx" type="checkbox" name="bicycling" value="bicycling">
-                        <label for="transit">Transit</label>
-                        <input class="transitCbx" type="checkbox" name="transit" value="transit">
-
+                    <div class="transpMethodsDiv text-justify row small">
+                        <div class="runForDiv col-6">
+                            <label for="runFor">RunCodeFor</label>
+                            <input type="number" max=100 min="2" name="runFor" class="runForInput" value="5" size="4" required placeholder="seconds">
+                        </div>
+                        <div class="transportationMethod col-6 text-center">
+                            <label for="driving">Car</label>
+                            <input class="drivingCbx" type="checkbox" name="driving" value="driving">
+                            <label for="walking">Walk</label>
+                            <input class="walkingCbx" type="checkbox" name="walking" value="walking" checked>
+                            <label for="bicycling">Bike</label>
+                            <input class="bicyclingCbx" type="checkbox" name="bicycling" value="bicycling">
+                            <label for="transit">Transit</label>
+                            <input class="transitCbx" type="checkbox" name="transit" value="transit">
+                        </div>
                     </div>
                     <div id="searchedPlaces">
                     </div>
@@ -284,17 +289,23 @@
                 'bicycling': false,
                 'transit': false
             }
-            var sleepAt = breakOutTimes($('.sleepTime').val())
-            var wakeUpAt = breakOutTimes($('.wakeUpTime').val())
+            var sleepAt = breakOutTimes($('.sleepTime').val());
+            var wakeUpAt = breakOutTimes($('.wakeUpTime').val());
+            var runFor = $('.runForInput').val();
+            if (runFor < 0 && runFor > 100){
+                runFor = 5;
+            }
             properties['sleepTime'] = sleepAt;
             properties['wakeUpTime'] = wakeUpAt;
-            properties['runFor'] = 105;
+            properties['runFor'] = runFor;
             // Section of the code to retrieve transportation methods
+            
             $('.transportationMethod [type="checkbox"]').each(function(){
                 var name = $(this).attr('name');
                 var checked = $(this).prop('checked');
                 $transportationMethods[name]=checked;
             });
+
             console.log($transportationMethods);
             properties['methods'] = $transportationMethods;
             //properties['methods'] = {'driving': false, 'walking': true }            

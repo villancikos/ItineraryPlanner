@@ -93,6 +93,23 @@
   box-shadow: 0px 2px 4px 1px rgba(0,0,0,0.35);
 }
 
+.transpMethodsDiv {
+  background-color: #ffffff;
+  padding: 10px 20px;
+  margin-top:1px;
+  margin-bottom: 5px;
+  -webkit-box-shadow: 0px 2px 4px 1px rgba(0,0,0,0.35);
+  -moz-box-shadow: 0px 2px 4px 1px rgba(0,0,0,0.35);
+  box-shadow: 0px 2px 4px 1px rgba(0,0,0,0.35);
+}
+
+.transpMethodsDiv .transportationMethod{
+  padding-top: 3px;
+}
+
+.transpMethodsDiv .runForDiv input[type=number]{
+  width: 40px;
+}
 
 #searchedPlaces ul {
   padding: 5px;

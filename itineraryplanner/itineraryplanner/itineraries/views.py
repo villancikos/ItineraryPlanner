@@ -76,19 +76,15 @@ class PlacesOfInterestView(FormView):
         properties = json.loads(form.cleaned_data['properties'])
         # Get the user preferente for running the Plan.
         # Make sure to get a Valid Int before hand, else parse a 5 second parameter.
-        try:
-            run_plan_for = int(properties['runFor'])
-            if (run_plan_for > 50 or run_plan_for < 0):
-                # protect the input and force it to 5 minutes
-                run_plan_for = 5
-        except ValueError:
-            run_plan_for = 5
+
+        run_plan_for = int(properties['runFor'])
         awaken_times = {
             'awaken': properties['wakeUpTime'],
             'not_awaken': properties['sleepTime']
         }
         transporation_methods = properties['methods']
-        print("Printing Properties.\n",properties, run_plan_for)
+        print("Printing Properties.\n",properties)
+        print("Printing Run For.\n", run_plan_for)
         #distanceMatrixJson = form.cleaned_data['distanceMatrix']
         #distanceMatrixObject = json.loads(distanceMatrixJson)
         created_places = []
