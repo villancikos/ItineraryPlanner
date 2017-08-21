@@ -1,0 +1,25 @@
+[{
+	"place_id": "ChIJq4H9JM4EdkgRjHEe4kS8Pck",
+	"is_hotel": false,
+	"name": "Trafalgar Square",
+	"lat": 51.50790900000001,
+	"lng": -0.1288604999999734,
+	"opens": null,
+	"closes": null
+}, {
+	"place_id": "ChIJ2dGMjMMEdkgRqVqkuXQkj7c",
+	"is_hotel": false,
+	"name": "Big Ben",
+	"lat": 51.50072919999999,
+	"lng": -0.12462540000001354,
+	"opens": null,
+	"closes": null
+}, {
+	"place_id": "ChIJh7wHoqwEdkgR3l-vqQE1HTo",
+	"is_hotel": false,
+	"name": "St. Paul's Cathedral",
+	"lat": 51.5138453,
+	"lng": -0.0983506000000034,
+	"opens": null,
+	"closes": null
+}]

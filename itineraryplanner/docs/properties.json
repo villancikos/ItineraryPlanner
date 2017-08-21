@@ -1,0 +1,11 @@
+{
+	"sleepTime": "2100",
+	"wakeUpTime": "0800",
+	"runFor": "5",
+	"methods": {
+		"driving": false,
+		"walking": true,
+		"bicycling": false,
+		"transit": false
+	}
+}
