@@ -185,35 +185,17 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
     traveltimes = ""
     visit_for = ""
     constraints = "{0}(:constraints\n{1}(and\n".format(tabs[1], tabs[2])
-    metrics = "\n{0}(:metric minimize\n{1}(+\n{2}(total-time)\n{3}(* {4}\
-    \n{5}(+\n".format(tabs[1], tabs[2], tabs[3], tabs[3], 1000, tabs[4])
-
-
-    ## Code for metrics...
-    """
-    (:metric minimize
-        (+
-            (total-time)
-            (
-                * VALUE 
-                (+
-                   (preference 1)
-                   (preference 2)
-                   (preference 3)
-                )
-                * VALUE 
-                (+
-                    (preference 4)
-                    (preference 5)
-                    (preference 6)
-
-                )
-            )
-        )
-    )
-    """
-
-
+    # metrics = "\n{0}(:metric minimize\n{1}(+\n{2}(total-time)\n{3}(* {4}\
+    #         \n{5}(+\n".format(
+    #             tabs[1], tabs[2], tabs[3], tabs[3], 1000, tabs[4])
+    metrics = "\n{0}(:metric minimize\n{1}(+\n{2}".format(
+                tabs[1], tabs[2], tabs[3])
+    preference_equivalences = {
+        0 : 100,
+        1: 500,
+        2 : 1000,
+        3 : 5000, # check out if instead this goes to goal.
+    }
 
     for step in steps:
         # first we get the paths
@@ -229,7 +211,74 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
         # for travel_method in travel_methods:
         traveltimes += "{0}(=(traveltime {1} {2} {3}){4})\n".format(
             tabs[2], method, origin, destination, duration)
-    for place in places:
+    """
+    This portion handles the preferences inside the
+    metric section of the problem file as follows:
+    (:metric minimize
+        (+
+            (total-time)
+            (* VALUE 
+                (+
+                    (preference 1)
+                    (preference 2)
+                    (preference 3)
+                )
+            )
+            (* VALUE 
+                (+
+                    (preference 4)
+                    (preference 5)
+                    (preference 6)
+                )
+            )
+        )
+    )
+    """
+    # Iterate through all the itinerary_places (POI object)
+    # global string to hold all the preferences
+    minimize_preferences_group = "(total-time)\n"
+    # dictionary to group preferences by priority level
+    priorities = {
+        0 : [],
+        1 : [],
+        2 : [],
+        3 : []
+    }
+    for place_pref in itinerary.itinerary_preference.all():
+        pref_place = place_pref.place.get_camelCase()
+        pref_priority = place_pref.priority
+        # we need to map each preference to its priority level
+        if pref_priority == 0:
+            priorities[0].append(pref_place)
+        if pref_priority == 1:
+            priorities[1].append(pref_place)
+        if pref_priority == 2:
+            priorities[2].append(pref_place)
+        if pref_priority == 3:
+            priorities[3].append(pref_place)
+    minimize_strings = {
+        0:"",1:"",2:"",3:""
+    }
+    for key,value in priorities.items():
+        # for each possible key, we need to create the minimize record.
+        if (len(value) ==1):
+            # we only need one preference, so we ditch the + not binary operator.
+            minimize_strings[key] = "(is-violated {})".format(value[0])
+        elif (len(value) > 1):
+            minimize_strings[key] = "(+ "
+            for item in value:    
+                # we know that there are more than one places in this preference thus +
+                minimize_strings[key] += " (is-violated {})\n".format(item)
+            minimize_strings[key] += " )"
+    for priority_value, group in minimize_strings.items():
+        if (len(group)>1):
+            minimize_preferences_group+="{}(* {} {} )\n".format(
+                tabs[3],
+                preference_equivalences[priority_value],
+                group)
+    print(minimize_preferences_group)
+
+    for place in places: 
         # Getting all the preferences added by the user on each place
         place_preferences = itinerary.itinerary_preference.filter(
             place__slug=place).get()
@@ -238,6 +287,8 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
         camel_case = place_preferences.place.get_camelCase()
         opens = place_preferences.place.opens
         closes = place_preferences.place.closes
+        priority = place_preferences.priority
+        #print(priority)
         # adding each of the places to the object declaration of the pddl program
         objects += "{0} ".format(place)
         # getting the duration of the visits.
@@ -258,6 +309,8 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
             else:
                 times += "{0}(at {1} (open {2}))\n".format(
                     tabs[2], 0, slug)
+            
+
             # getting the constraints
             # which places does the user wants to visit
             # TODO: make sure the constraints don't overlap everything else (overkill)
@@ -269,16 +322,18 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
                 tabs[2], place, place_preferences.visitFor)
             # the user may say a place is a MUST in his list.
             # Therefore we evauate these preferences.
-            if place_preferences.must_visit:
-                # goals += "{0}(preference {1} (visited tourist1 {2}))\n".format(
-                #     tabs[3], camel_case, slug)
-                metrics += "{0}(is-violated {1})\n".format(tabs[5], camel_case)
+            
+            # if place_preferences.must_visit:
+            #     # goals += "{0}(preference {1} (visited tourist1 {2}))\n".format(
+            #     #     tabs[3], camel_case, slug)
+            #     metrics += "{0}(is-violated {1})\n".format(tabs[5], camel_case)
 
     visit_for += "\t)\n"  # ending of visit_for
     goals += "\t\t)\n\t)\n"  # ending of goals
     constraints += "{0})\n{1})".format(tabs[2], tabs[1])
-    metrics += "{0})\n{1})\n{2})\n{3})\n)".format(
-        tabs[4], tabs[3], tabs[2], tabs[1])
+    # metrics += "{0})\n{1})\n{2})\n{3})\n)".format(
+    #     tabs[4], tabs[3], tabs[2], tabs[1])
+    metrics += "{}{})\n{})\n)".format( minimize_preferences_group, tabs[2], tabs[1])
     objects += " - location tourist1 - tourist walk car bike tube - mode)\n"
     # print(header, objects, init, times, tourist_starting_location,
     #      paths, traveltimes, visit_for, goals, constraints, metrics)

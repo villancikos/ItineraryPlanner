@@ -23,7 +23,7 @@ class PlacesOfInterestForm(forms.Form):
         {
             "sleepTime":"2100",
             "wakeUpTime":"0800",
-            "runFor":105,
+            "runFor":60, // MAX VALUE
             "methods":{
                 "driving":true,
                 "walking":false,
@@ -31,7 +31,7 @@ class PlacesOfInterestForm(forms.Form):
                 "transit":false
             }
         }
-        Thus, validation is needed as follows...
+        Thus, validation is needed above all for the Run For Parameter.
         """
         properties_raw = self.cleaned_data['properties']
         # try to get the json if not, then something is wrong.
@@ -43,6 +43,7 @@ class PlacesOfInterestForm(forms.Form):
         try:
             run_for = int(properties_json_data['runFor'])
             if (run_for > 60 or run_for < 0):
+                print("RunFor Parameter exceeds capabilities.")
                 # default value to 5 to avoid overwhelming the server.
                 run_for = 5
         except ValueError:

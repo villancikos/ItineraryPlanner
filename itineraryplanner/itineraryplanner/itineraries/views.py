@@ -61,21 +61,20 @@ class PlacesOfInterestView(FormView):
             return self.form_invalid(form)
 
     def form_invalid(self, form):
-        print("oh noes!!!")
-        print(form)
+        print("The form is invalid. As such the program can't continue.")
         return super(PlacesOfInterestView, self).form_invalid(form)
 
     def form_valid(self, form):
         response = super(PlacesOfInterestView, self).form_valid(form)
-        # This method is called when valid form data has been POSTed.
+        # This method is called when valid form data has been POST-ed.
         # It should return an HttpResponse.
-
-        #places_to_visit_json = form.cleaned_data['placesToVisit']
+        # Contains the list of places the user wants to visit.
         places_to_visit = json.loads(form.cleaned_data['placesToVisit'])
+        # Preferences are priority of places, visit for, end at and start at.
         preferences = json.loads(form.cleaned_data['preferences'])
+        # Properties refers to the sleep time, wake up time and transporation methods used.
         properties = json.loads(form.cleaned_data['properties'])
         # Get the user preferente for running the Plan.
-        # Make sure to get a Valid Int before hand, else parse a 5 second parameter.
 
         run_plan_for = int(properties['runFor'])
         awaken_times = {
@@ -140,6 +139,7 @@ class PlacesOfInterestView(FormView):
         itinerary.initialPOI = PlaceOfInterest.objects.get(place_id=start_at)
         itinerary.endingPOI = PlaceOfInterest.objects.get(place_id=end_at)
         itinerary.save()
+        #import pdb;pdb.set_trace()
         for place in created_places:
             visit_for = preferences[place.place_id]['visitFor']
             priority = preferences[place.place_id]['priority']
@@ -212,7 +212,7 @@ class PlacesOfInterestView(FormView):
         # one liner to print steps just to verify
         # [print(step) for step in itinerary.steps.all()]
         # create the string that will be embeded in the problem file.
-        file_contents = create_pddl_problem(itinerary, awaken_times, output_plan=False)
+        file_contents = create_pddl_problem(itinerary, awaken_times, output_plan=True)
         file_name = "{0}-{1}.{2}".format("itinerary", str(itinerary.slug), "pddl")
         # add contents to file.
         write_pddl_file(file_contents, file_name)
