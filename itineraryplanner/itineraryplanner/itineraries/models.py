@@ -166,7 +166,7 @@ class ItineraryStep(TimeStampedModel):
         (0, 'WALK', 'walk'),
         (1, 'BIKE', 'bike'),
         (2, 'CAR', 'car'),
-        (3, 'TUBE', 'tube'),
+        (3, 'TRANSIT', 'transit'),
     )
     origin = models.ForeignKey(
         PlaceOfInterest,

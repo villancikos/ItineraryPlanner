@@ -183,11 +183,11 @@
         // var csrftoken = Cookies.get('csrftoken');
         // initializing Map
         // dictionary to transalte values for transportation methods
-        transporation_equivalences =  {
+        transportation_equivalences =  {
             'walk':'WALKING',
             'bike':'BICYCLING',
             'car':'DRIVING',
-            'tube':'TRANSIT'
+            'transit':'TRANSIT'
         }
         map = new google.maps.Map(document.getElementById("map"), {
             center: mapInitialLocation,
@@ -597,7 +597,7 @@
                     var fromPlaceId = planDict[key]['fromPlaceId'];
                     var toPlaceId = planDict[key]['toPlaceId'];
                     var method = planDict[key]['method'];
-                    var googleMethod = transporation_equivalences[method]
+                    var googleMethod = transportation_equivalences[method]
                     var fromLocation = null;
                     var toLocation = null;
 

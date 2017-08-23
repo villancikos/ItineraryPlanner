@@ -167,7 +167,7 @@ class PlacesOfInterestView(FormView):
                                     'walking': ItineraryStep.METHOD_CHOICES.WALK,
                                     'bicycling': ItineraryStep.METHOD_CHOICES.BIKE,
                                     'driving': ItineraryStep.METHOD_CHOICES.CAR,
-                                    'transit': ItineraryStep.METHOD_CHOICES.TUBE,
+                                    'transit': ItineraryStep.METHOD_CHOICES.TRANSIT,
                                 }
                                 dmx = gmaps.distance_matrix(
                                     origins='place_id:{}'.format(origin['place_id']),
