@@ -188,7 +188,9 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
     # metrics = "\n{0}(:metric minimize\n{1}(+\n{2}(total-time)\n{3}(* {4}\
     #         \n{5}(+\n".format(
     #             tabs[1], tabs[2], tabs[3], tabs[3], 1000, tabs[4])
-    metrics = "\n{0}(:metric minimize\n{1}(+\n{2}".format(
+    # metrics = "\n{0}(:metric minimize\n{1}(+\n{2}".format(
+    #             tabs[1], tabs[2], tabs[3])
+    metrics = "\n{0}(:metric minimize\n{1}\n{2}".format(
                 tabs[1], tabs[2], tabs[3])
     preference_equivalences = {
         0 : 100,
@@ -276,7 +278,13 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
                 tabs[3],
                 preference_equivalences[priority_value],
                 group)
-    print(minimize_preferences_group)
+    #print(minimize_preferences_group)
+    # detect if we have more than one group of priorities
+    multi_preferences = True
+    for v in minimize_strings.items():
+        if (len(v[1]) < 1):
+            multi_preferences = False
+            break
 
     for place in places: 
         # Getting all the preferences added by the user on each place
@@ -326,6 +334,12 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
             # if place_preferences.must_visit:
             #     # goals += "{0}(preference {1} (visited tourist1 {2}))\n".format(
             #     #     tabs[3], camel_case, slug)
+
+
+
+
+
+
             #     metrics += "{0}(is-violated {1})\n".format(tabs[5], camel_case)
 
     visit_for += "\t)\n"  # ending of visit_for
@@ -333,7 +347,12 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
     constraints += "{0})\n{1})".format(tabs[2], tabs[1])
     # metrics += "{0})\n{1})\n{2})\n{3})\n)".format(
     #     tabs[4], tabs[3], tabs[2], tabs[1])
-    metrics += "{}{})\n{})\n)".format( minimize_preferences_group, tabs[2], tabs[1])
+    # metrics += "{}{})\n{})\n)".format( minimize_preferences_group, tabs[2], tabs[1])
+    if multi_preferences:
+        metrics += "(+\n"
+        metrics += "{}{}{})\n{})\n)".format(tabs[5], minimize_preferences_group, tabs[4], tabs[1])
+    else:
+        metrics += "{}{}\n{})\n)".format( minimize_preferences_group, tabs[2], tabs[1])
     objects += " - location tourist1 - tourist walk car bike tube - mode)\n"
     # print(header, objects, init, times, tourist_starting_location,
     #      paths, traveltimes, visit_for, goals, constraints, metrics)
@@ -381,7 +400,7 @@ def convert_plan(plan):
     solved = False
     find_solution = re.compile(r"Solution Found", re.MULTILINE)
     solution_found = find_solution.search(plan)
-    if (len(solution_found.span())>1):
+    if ((solution_found != None) and (len(solution_found.span())>1)):
         print("A solution was found")
         last_result_index = solution_found
         solved = True
@@ -389,6 +408,7 @@ def convert_plan(plan):
     # right now we iterate through all the found plans and we get the latest.
     # the right way should be only get the last occurrence.
     if not solved:
+        print("No solution was found")
         for last_result_index in find_goals.finditer(plan):
             pass
         if not last_result_index:
@@ -447,6 +467,7 @@ def run_subprocess(itinerary_slug, sleep_for=None, domain_file=None):
     commands = ['optic-cplex',
                 domain_file,
                 problem_file]
+    #TODO: Avoide sleeping if solution is found.
     proc = subprocess.Popen(commands, stdout=subprocess.PIPE)
     time.sleep(sleep_for)
     proc.terminate()
