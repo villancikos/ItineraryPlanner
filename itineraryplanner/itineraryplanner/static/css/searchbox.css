@@ -176,3 +176,34 @@
   top: 30vh;
   left: 50vw;
 }
+
+/*
+Show solution button
+*/
+#showSolution {
+  display: none;
+  position: fixed;
+  top: 50px;
+  z-index: 9;
+  left: 500px;
+}
+
+#solutionSteps{
+  height: 100vh;
+  background: #ffffff;
+  display: none;
+  position: absolute;
+  z-index: 9;
+  width: 480px;
+  left: 0px;
+  top: 0px;
+  overflow: scroll;
+}
+
+#solutionSteps .list-group .list-group-item:hover{
+  background-color: #e7e7e7;
+  -webkit-transition: background-color 250ms linear;
+  -ms-transition: background-color 250ms linear;
+  transition: background-color 250ms linear;
+  cursor: pointer;
+}

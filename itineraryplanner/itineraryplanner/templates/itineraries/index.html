@@ -16,10 +16,31 @@
 </head>
 
 <body>
+    <div class="modal fade plannerSuccessModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Good News!</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>The planner found a solution for your query.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>
     <div id="loadingDiv">
         <img src="{% static 'images/spinner.svg' %}" onerror="{% static 'images/spinner.gif' %}" alt="loading icon"/>
     </div>
     <div class="container-fluid wrapper">
+        <button id="showSolution">Solution</button>
+        <div id="solutionSteps">
+        </div>
         <div class="row leftSidebar">
             <div id="places" class="col-lg-4 p-0">
                 <input id="pac-input" class="controls noEnterSubmit" type="text" placeholder="Search Box">
@@ -49,7 +70,7 @@
                     <div class="transpMethodsDiv text-justify row small">
                         <div class="runForDiv col-6">
                             <label for="runFor">RunCodeFor</label>
-                            <input type="number" max=100 min="2" name="runFor" class="runForInput" value="5" size="4" required placeholder="seconds">
+                            <input type="number" max=100 min="2" name="runFor" class="runForInput" value="2" size="4" required placeholder="seconds">
                         </div>
                         <div class="transportationMethod col-6 text-center">
                             <label for="driving">Car</label>
@@ -67,7 +88,8 @@
                 </form>
             </div>
             {% comment %} Everything map related goes here {% endcomment %}
-            <div id="map" class="col-lg-8"></div>
+            <div id="map" class="col-lg-8">
+            </div>
             <div style="display: none">
                 <div id="info-content">
                     <table>
@@ -128,12 +150,14 @@
         var map, placesService, infoWindow;
         var markers = [];
         var placesSelected = [];
+        var placesWithNames = {};
         var idOfPlacesSelected = [];
         // this list holds the complete google response after search (place object)
         var googleSearchedPlaces = [];
         var hostnameRegexp = new RegExp('^https?://.+?/');
         // global list for directionRenderer
         directionsRendererList = [];
+        var showButtonClicked = false;
         //var service = new google.maps.DistanceMatrixService;
         // debugger;
         // var csrftoken = Cookies.get('csrftoken');
@@ -194,6 +218,7 @@
                 googleSearchedPlaces.push("place_id:" + place.place_id);
                 placesSelected.push(place);
                 idOfPlacesSelected.push(place.place_id);
+                placesWithNames[place.place_id]=place.name;
                 populateMarkers(place);
                 if (place.geometry.viewport) {
                     // Only geocodes have viewport.
@@ -349,7 +374,10 @@
                 return toSubmitList.push(make_json_marker(marker));
             });
             var toSubmitJsonList = JSON.stringify(toSubmitList);
-
+            /***************************
+            Delete old solution to make room for a new one
+            *******************************/
+            clearOldSolution();
             var csrftoken = Cookies.get('csrftoken');
             function csrfSafeMethod(method) {
                 // these HTTP methods do not require CSRF protection
@@ -372,27 +400,125 @@
                 },
                 success: function (json) {
                     // What we receive from success on server side.
-                    console.log(json);
-                    console.log("success!");
                     let solved = JSON.parse(json['solved']);
                     if(solved){
-                        alert("Good News!\n The planner came up with a perfect solution.")
+                        $('.plannerSuccessModal').modal()
                     }
                     else{
                         alert("The planner came up with the following solution.")
                     }
-                    console.log(JSON.parse(json['final_plan']));
-                    drawRoute(json);                 
+                    drawRoute(json);
+                    displaySolutions(JSON.parse(json['final_plan']))     
                     $("#submitPlaceSelection").attr("disabled", false);
                 },
                 error: function (json) {
                     // in case of error we get this from server
                     $("#submitPlaceSelection").attr("disabled", false);
+                    alert("An error has occured. Please check the log.");
                     console.log(json.responseJSON);
                 },
             });
         });
-        
+
+        function clearOldSolution(){
+            showButtonClicked = false;
+            $('#showSolution').text('Hide Plan');
+            $('#showSolution').hide();
+            $('#solutionSteps').empty().hide();
+        }
+        $('#showSolution').on("click", function(){
+            if (showButtonClicked){
+                // haven't clicked so let's toggle text:
+                $(this).text('Show Plan');
+                $('#solutionSteps').hide();
+            }
+            else{
+                $(this).text('Hide Plan');
+                $('#solutionSteps').show();
+            }
+            showButtonClicked = !showButtonClicked
+        })
+
+        function displaySolutions(planDict){
+            $('#showSolution').show();
+            showButtonClicked=true;
+
+            $('#solutionSteps').show();
+            /*
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">List group item heading</h5>
+                    <small>3 days ago</small>
+                </div>
+                <p class="mb-1">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+                <small>Donec id elit non mi porta.</small>
+            */
+            var $solutionWrapper = $('#solutionSteps');
+            var $solutionList = $('<div class="list-group flex-column align-items-stretch">');
+            Object.keys(planDict).forEach(function(currentKey) {
+                var markerToTriggerOnClick;
+                console.log(currentKey, planDict[currentKey]);
+                var solMethod =planDict[currentKey]['method'];
+                var $stepWrapper = $('<div class="list-group-item">');
+                if (solMethod==='visit'){
+                    var $place = placesWithNames[planDict[currentKey]['visitPlaceId']];
+                    var $stepDiv = $('<div class="">');
+                    $stepDiv.append(
+                        $('<p data-index='+currentKey+'>').append($('<h5>Visit</h5>'))
+                    ).append(
+                        $('<small>'+$place+'</small>')
+                    );
+                    var $indexDiv = $('<div class="">').append(
+                        $('<div class="p-3">Step:'+planDict[currentKey]['index']+'</div>')
+                    );
+                    $stepWrapper.append($indexDiv);
+                    $stepWrapper.append($stepDiv);
+                    $solutionList.append($stepWrapper);
+                    /******* Add Click event to Marker ************/
+                    markers.forEach(function(marker){
+                        if (planDict[currentKey]['visitPlaceId']===marker.placeResult.place_id){
+                            markerToTriggerOnClick = marker;
+                        }
+                    });
+                    $stepWrapper.on("click", function(){
+                        google.maps.event.trigger(markerToTriggerOnClick, 'click');
+                    });
+                }
+                else{
+                    var $from = placesWithNames[planDict[currentKey]['fromPlaceId']];
+                    var $to = placesWithNames[planDict[currentKey]['toPlaceId']];
+                    var $stepDiv = $('<div class="">');
+                    $stepDiv.append(
+                        $('<p data-index='+currentKey+'>').append($('<h5>Move</h5>'))
+                    ).append(
+                        $('<small>FROM:'+$from+'</small></br>')
+                    ).append(
+                        $('<small>TO:'+$to+'</small>')
+                    );
+                    var $indexDiv = $('<div class="">').append(
+                        $('<div class="p-3">Step:'+planDict[currentKey]['index']+'</div>')
+                    );
+                    $stepWrapper.append($indexDiv);
+                    $stepWrapper.append($stepDiv);
+                    $solutionList.append($stepWrapper);
+                    /******* Add Click event to Marker ************/
+                    markers.forEach(function(marker){
+                        if (planDict[currentKey]['fromPlaceId']===marker.placeResult.place_id){
+                            markerToTriggerOnClick = marker;
+                        }
+                    });
+                    $stepWrapper.on("click", function(){
+                        google.maps.event.trigger(markerToTriggerOnClick, 'click');
+                    });
+                }
+
+            });
+            $solutionWrapper.append($solutionList);
+
+            //$('#showSolution').toggle();
+            //$('#showSolution').text('Show Solution');
+            //$('#solutionSteps').toggle();
+
+        }
         function getRandomColor() {
             var letters = '0123456789ABCDEF';
             var color = '#';
@@ -608,13 +734,13 @@
                     .append(
                     $('<option>', {
                         value: 2,
-                        text: "Should Visit!"
+                        text: "Should Visit"
                     })
                     )
                     .append(
                     $('<option>', {
                         value: 3,
-                        text: "Must Visit!!!"
+                        text: "Must Visit"
                     })
                     ).prop('required', true)
             );
@@ -892,6 +1018,7 @@
             });
             markers = [];
             placesSelected = [];
+            placesWithNames = {};
             googleSearchedPlaces = [];
             idOfPlacesSelected = [];
             $('#id_placesToVisit').val('');
@@ -917,6 +1044,7 @@
                     indexToRemove = index;
                 }
             });
+            delete placesWithNames[placeId];
             google.maps.event.clearInstanceListeners(markers[indexToRemove]);
             markers[indexToRemove].setMap(null);
             // Remove the marker from Markers List
