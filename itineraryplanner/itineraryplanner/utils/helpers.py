@@ -12,6 +12,11 @@ from django.template.defaultfilters import slugify
 
 APPS_DIR = settings.APPS_DIR.root
 
+
+def remove_special_chars_from_name(name):
+    replaced_name = re.sub('[!@#$0-9()]','',name).strip()
+    return replaced_name
+
 def write_pddl_file(file_contents, file_name="itinerary_problem.pddl"):
     """
     Creates the directory if it doesn't exist and the files needed
@@ -97,7 +102,7 @@ def unique_slugify(instance, value, slug_field_name='slug', queryset=None,
 
     setattr(instance, slug_field.attname, slug)
 
-def convert_times_for_planner(time):
+def convert_times_for_planner(time, is_close=False):
     """
     This function transforms regular military time
     to a relative time for the planner.
@@ -107,10 +112,19 @@ def convert_times_for_planner(time):
     """
     # TODO: Cases when closes at next day in the morning.
     # Like Maughan at 0100.
+    # TODO: URGENT CHANGE FOR MADRUGADA
     try:
-        new_time = (int(time)/100)*60
+        new_time = int(time)
+        if is_close:
+            # cases when closes after midnight
+            if new_time < 1000:
+                new_time = 2400 
+        new_time = (int(new_time)/100)*60
     except ValueError:
-        new_time = 480 # default value for 8 AM
+        if is_close:
+            new_time = 1440
+        else:
+            new_time = 480 # default value for 8 AM
     return new_time
 
 def convert_time_to_military(time):
@@ -176,8 +190,20 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
     traveltimes = ""
     visit_for = ""
     constraints = "{0}(:constraints\n{1}(and\n".format(tabs[1], tabs[2])
-    metrics = "\n{0}(:metric minimize\n{1}(+\n{2}(total-time)\n{3}(* {4}\
-    \n{5}(+\n".format(tabs[1], tabs[2], tabs[3], tabs[3], 1000, tabs[4])
+    # metrics = "\n{0}(:metric minimize\n{1}(+\n{2}(total-time)\n{3}(* {4}\
+    #         \n{5}(+\n".format(
+    #             tabs[1], tabs[2], tabs[3], tabs[3], 1000, tabs[4])
+    # metrics = "\n{0}(:metric minimize\n{1}(+\n{2}".format(
+    #             tabs[1], tabs[2], tabs[3])
+    metrics = "\n{0}(:metric minimize\n{1}\n{2}".format(
+                tabs[1], tabs[2], tabs[3])
+    preference_equivalences = {
+        0 : 100,
+        1: 500,
+        2 : 1000,
+        3 : 5000, # check out if instead this goes to goal.
+    }
+
     for step in steps:
         # first we get the paths
         # if step.origin.slug != place:
@@ -192,7 +218,81 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
         # for travel_method in travel_methods:
         traveltimes += "{0}(=(traveltime {1} {2} {3}){4})\n".format(
             tabs[2], method, origin, destination, duration)
-    for place in places:
+    """
+    This portion handles the preferences inside the
+    metric section of the problem file as follows:
+    (:metric minimize
+        (+
+            (total-time)
+            (* VALUE 
+                (+
+                    (preference 1)
+                    (preference 2)
+                    (preference 3)
+                )
+            )
+            (* VALUE 
+                (+
+                    (preference 4)
+                    (preference 5)
+                    (preference 6)
+                )
+            )
+        )
+    )
+    """
+    # Iterate through all the itinerary_places (POI object)
+    # global string to hold all the preferences
+    minimize_preferences_group = "\n"
+    # dictionary to group preferences by priority level
+    priorities = {
+        0 : [],
+        1 : [],
+        2 : [],
+        3 : []
+    }
+    for place_pref in itinerary.itinerary_preference.all():
+        pref_place = place_pref.place.get_camelCase()
+        pref_priority = place_pref.priority
+        # we need to map each preference to its priority level
+        if pref_priority == 0:
+            priorities[0].append(pref_place)
+        if pref_priority == 1:
+            priorities[1].append(pref_place)
+        if pref_priority == 2:
+            priorities[2].append(pref_place)
+        if pref_priority == 3:
+            priorities[3].append(pref_place)
+    minimize_strings = {
+        0:"",1:"",2:"",3:""
+    }
+    for key,value in priorities.items():
+        # for each possible key, we need to create the minimize record.
+        if (len(value) ==1):
+            # we only need one preference, so we ditch the + not binary operator.
+            minimize_strings[key] = "(is-violated {})".format(value[0])
+        elif (len(value) > 1):
+            minimize_strings[key] = "(+\n"
+            for item in value:    
+                # we know that there are more than one places in this preference thus +
+                minimize_strings[key] += "{}(is-violated {})\n".format(tabs[5],item)
+            minimize_strings[key] += " )"
+    for priority_value, group in minimize_strings.items():
+        if (len(group)>1):
+            minimize_preferences_group+="{}(* {} {} )\n".format(
+                tabs[3],
+                preference_equivalences[priority_value],
+                group)
+    #print(minimize_preferences_group)
+    # detect if we have more than one group of priorities
+    multi_preferences = False
+    multi_preference_counter = 0 # counts if at least two properties used
+    for v in minimize_strings.items():
+        if (len(v[1]) > 1):
+            multi_preference_counter+=1
+    if (multi_preference_counter>1):
+        multi_preferences = True
+    for place in places: 
         # Getting all the preferences added by the user on each place
         place_preferences = itinerary.itinerary_preference.filter(
             place__slug=place).get()
@@ -201,6 +301,8 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
         camel_case = place_preferences.place.get_camelCase()
         opens = place_preferences.place.opens
         closes = place_preferences.place.closes
+        priority = place_preferences.priority
+        #print(priority)
         # adding each of the places to the object declaration of the pddl program
         objects += "{0} ".format(place)
         # getting the duration of the visits.
@@ -209,9 +311,9 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
             if opens and closes:
                 # Normal Escenario with opening and closing times
                 times += "{0}(at {1} (open {2}))\n".format(
-                    tabs[2], (int(opens)/100)*60, slug)
+                    tabs[2], convert_times_for_planner(opens), slug)
                 times += "{0}(at {1} (not (open {2})))\n".format(
-                    tabs[2], (int(closes)/100)*60, slug)
+                    tabs[2], convert_times_for_planner(closes,True), slug)
             elif opens:
                 # scenario where place opens 24 hours so no closing.
                 if opens == '0000':
@@ -221,6 +323,8 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
             else:
                 times += "{0}(at {1} (open {2}))\n".format(
                     tabs[2], 0, slug)
+            
+
             # getting the constraints
             # which places does the user wants to visit
             # TODO: make sure the constraints don't overlap everything else (overkill)
@@ -232,17 +336,30 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
                 tabs[2], place, place_preferences.visitFor)
             # the user may say a place is a MUST in his list.
             # Therefore we evauate these preferences.
-            if place_preferences.must_visit:
-                # goals += "{0}(preference {1} (visited tourist1 {2}))\n".format(
-                #     tabs[3], camel_case, slug)
-                metrics += "{0}(is-violated {1})\n".format(tabs[5], camel_case)
+            
+            # if place_preferences.must_visit:
+            #     # goals += "{0}(preference {1} (visited tourist1 {2}))\n".format(
+            #     #     tabs[3], camel_case, slug)
+
+
+
+
+
+
+            #     metrics += "{0}(is-violated {1})\n".format(tabs[5], camel_case)
 
     visit_for += "\t)\n"  # ending of visit_for
     goals += "\t\t)\n\t)\n"  # ending of goals
     constraints += "{0})\n{1})".format(tabs[2], tabs[1])
-    metrics += "{0})\n{1})\n{2})\n{3})\n)".format(
-        tabs[4], tabs[3], tabs[2], tabs[1])
-    objects += " - location tourist1 - tourist car bus tube walk - mode)\n"
+    # metrics += "{0})\n{1})\n{2})\n{3})\n)".format(
+    #     tabs[4], tabs[3], tabs[2], tabs[1])
+    # metrics += "{}{})\n{})\n)".format( minimize_preferences_group, tabs[2], tabs[1])
+    if multi_preferences:
+        metrics += "(+\n"
+        metrics += "{}{}{})\n{})\n)".format(tabs[5], minimize_preferences_group, tabs[4], tabs[1])
+    else:
+        metrics += "{}{}\n{})\n)".format( minimize_preferences_group, tabs[2], tabs[1])
+    objects += " - location tourist1 - tourist walk car bike tube - mode)\n"
     # print(header, objects, init, times, tourist_starting_location,
     #      paths, traveltimes, visit_for, goals, constraints, metrics)
     file_contents = header + objects + init + times + tourist_starting_location + \
@@ -276,39 +393,68 @@ def convert_plan(plan):
     and both the index (order in which the planner suggest to visit the place)
     and the duration of the 'task' as values.
     """
-    # import pdb;pdb.set_trace()
     instruction_set = {}
-    # Using python raw string to avoid multiple escape chars '/'.
-    # import ipdb;ipdb.set_trace()
+    #visit_set = {}
+    # Using python raw string to avoid multiple escape chars '\'.
+    # This regex finds all the instructions between XXX.XXX: (action ... ...) [YYY.YYY]
+    # where XXX is the time when the action started and YYY is the time it took to perform
     regex = re.compile(
         r"^\d+.\d+: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$", re.MULTILINE)
     find_goals = re.compile(r"(?<=; Plan found with metric )\d+.\d+",re.MULTILINE)
+    # First check if there is a solution available
     last_result_index = None
-    # TODO: Improve this iteration as right now seems prone to errors.
-    
-    for last_result_index in find_goals.finditer(plan):
-        pass
-    if not last_result_index:
-        raise(TypeError)
+    solved = False
+    find_solution = re.compile(r"Solution Found", re.MULTILINE)
+    solution_found = find_solution.search(plan)
+    if ((solution_found != None) and (len(solution_found.span())>1)):
+        print("A solution was found")
+        last_result_index = solution_found
+        solved = True
+    # TODO: Improve this iteration as right now seems overkilling.
+    # right now we iterate through all the found plans and we get the latest.
+    # the right way should be only get the last occurrence.
+    if not solved:
+        print("No solution was found")
+        for last_result_index in find_goals.finditer(plan):
+            pass
+        if not last_result_index:
+            raise(TypeError)
+    # last_result_index contains the last occurrence of the best plan
     planner_steps = regex.findall(plan,last_result_index.span()[1])
     counter = 0
-    for instruction in planner_steps:
-        moving_instruction = re.findall(r"\(move.+\)", instruction)
-        print("Moving Instructions: ", moving_instruction)
-        for move in moving_instruction:
+    # Doing a manual if/else for move or visit properties.
+    for step in planner_steps:
+        moving_instruction = re.findall(r"\(move.+\)", step)
+        visit_instruction = re.findall(r"\(visit.+\)", step)
+        if ((len(moving_instruction) > 0) and (len(visit_instruction) == 0)):
+            # let's do a moving instruction
             splitter = []  #  will hold each bit of each instruction
-            starting = move.find("(") + 1
-            ending = move.find(")")
-            splitter = move[starting:ending].split()
+            starting = moving_instruction[0].find("(") + 1
+            ending = moving_instruction[0].find(")")
+            splitter = moving_instruction[0][starting:ending].split()
             instruction_set[counter] = {
                 'method': splitter[-1],
                 'from': splitter[-3],
                 'to': splitter[-2],
                 'index': counter,
             }
-            counter = counter+1
-    print(instruction_set)
-    return instruction_set
+            counter += 1
+        elif ((len(visit_instruction) > 0) and (len(moving_instruction) == 0)):
+            # means that we are doing a visit instruction
+            splitter = []
+            starting = visit_instruction[0].find("(") + 1
+            ending = visit_instruction[0].find(")")
+            splitter = visit_instruction[0][starting:ending].split()
+            instruction_set[counter] = {
+                'method': 'visit',
+                'place': splitter[-1],
+                'index': counter,
+            }
+            counter += 1
+        else:
+            print("Both instruction cases were false ...\n???????????? ")
+        print(splitter)
+    return instruction_set,solved
 
 def run_subprocess(itinerary_slug, sleep_for=None, domain_file=None):
     """
@@ -327,11 +473,19 @@ def run_subprocess(itinerary_slug, sleep_for=None, domain_file=None):
     commands = ['optic-cplex',
                 domain_file,
                 problem_file]
+    print("If optic-cplex fails is because needs to be exported to PATH")
+    # Next line added for optic. Run optic cplex domain problem to use
+    # export PATH=".../optic/debug/optic:$PATH"
+
+    #TODO: Avoide sleeping if solution is found.
     proc = subprocess.Popen(commands, stdout=subprocess.PIPE)
     time.sleep(sleep_for)
     proc.terminate()
+    # put into the text variable the results from the console.
     text = proc.stdout.read().decode("UTF-8")
+    # freeze the output into a tangible file
     print(freeze_output_file(itinerary_slug,text))
+    # print the results to the console.
     pprint.pprint(text)
     return text
 

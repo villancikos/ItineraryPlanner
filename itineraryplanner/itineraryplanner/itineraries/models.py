@@ -71,6 +71,7 @@ class PlaceOfInterest(TimeStampedModel):
         blank=True,
     )
     # Meta and String
+
     def __str__(self):
         return '{0}'.format(self.name)
 
@@ -79,9 +80,9 @@ class PlaceOfInterest(TimeStampedModel):
         if self.pk is None:
             unique_slugify(self, self.name)
         super(PlaceOfInterest, self).save(*args, **kwargs)
-  
+
     def get_camelCase(self):
-        return "Visit"+''.join(x.capitalize() or '-' for x in self.slug.split('-'))
+        return "Visit" + ''.join(x.capitalize() or '-' for x in self.slug.split('-'))
 
 
 class Itinerary(TimeStampedModel):
@@ -120,6 +121,7 @@ class Itinerary(TimeStampedModel):
         null=True,
         related_name="ending_point_for_itinerary"
     )
+
     def get_itinerary_places(self):
         """ this method will return 
         all the places that the user wants to visit
@@ -131,7 +133,7 @@ class Itinerary(TimeStampedModel):
                 last_place = step.origin
                 places.append(step.origin.slug)
         return places
-    
+
     def get_distance_matrix_places_format(self):
         """ This method is used to append the keyword place_id:
         to each place in the list so we can request a more precise
@@ -162,9 +164,9 @@ class ItineraryStep(TimeStampedModel):
     """
     METHOD_CHOICES = Choices(
         (0, 'WALK', 'walk'),
-        (1, 'BUS', 'bus'),
+        (1, 'BIKE', 'bike'),
         (2, 'CAR', 'car'),
-        (3, 'TUBE', 'tube'),
+        (3, 'TRANSIT', 'transit'),
     )
     origin = models.ForeignKey(
         PlaceOfInterest,
@@ -198,7 +200,7 @@ class ItineraryStep(TimeStampedModel):
     def get_travel_method(self):
         """ helper function to return travel method in readable format"""
         return self.METHOD_CHOICES[self.method]
-        
+
     # Meta and String
     class Meta:
         verbose_name = _("Itinerary Step")
@@ -206,8 +208,8 @@ class ItineraryStep(TimeStampedModel):
         ordering = ["index", "created"]
 
     def __str__(self):
-        return 'Itinerary step from {0} to {1}. Method: {2}. Duration:{3}\n'.format(
-            self.origin, self.destination, self.METHOD_CHOICES[self.method], self.duration)
+        return 'Itinerary step from {0} to {1}. Method: {2}. Duration:{3}. Index:{4}\n'.format(
+            self.origin, self.destination, self.METHOD_CHOICES[self.method], self.duration, self.index)
 
 
 class Preferences(TimeStampedModel):
@@ -249,9 +251,15 @@ class Preferences(TimeStampedModel):
         choices=PRIORITY_CHOICES,
         default=PRIORITY_CHOICES.LOW,
     )
+    index = models.PositiveSmallIntegerField(
+        default=32767,
+    )
+
     class Meta:
         verbose_name = _("Itinerary Preference")
-        verbose_name_plural= _("Itinerary Preferences")
+        verbose_name_plural = _("Itinerary Preferences")
 
     def __str__(self):
-        return 'Visit {0} for {1}mins on Itinerary:{2}'.format(self.place,self.visitFor, self.itinerary.slug)
+        return 'Index {0}. Visit {1} for {2}mins with priority {3} on Itinerary:{4}'.format(
+            self.index, self.place, self.visitFor, 
+            self.PRIORITY_CHOICES[self.priority], self.itinerary.slug)
