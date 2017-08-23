@@ -236,7 +236,7 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
     """
     # Iterate through all the itinerary_places (POI object)
     # global string to hold all the preferences
-    minimize_preferences_group = "(total-time)\n"
+    minimize_preferences_group = "\n"
     # dictionary to group preferences by priority level
     priorities = {
         0 : [],
@@ -370,16 +370,30 @@ def convert_plan(plan):
     """
     instruction_set = {}
     #visit_set = {}
-    # Using python raw string to avoid multiple escape chars '/'.
+    # Using python raw string to avoid multiple escape chars '\'.
+    # This regex finds all the instructions between XXX.XXX: (action ... ...) [YYY.YYY]
+    # where XXX is the time when the action started and YYY is the time it took to perform
     regex = re.compile(
         r"^\d+.\d+: \({1}[a-z0-9 -]*\){1}  \[[0-9.]*\]$", re.MULTILINE)
     find_goals = re.compile(r"(?<=; Plan found with metric )\d+.\d+",re.MULTILINE)
+    # First check if there is a solution available
     last_result_index = None
+    solved = False
+    find_solution = re.compile(r"Solution Found", re.MULTILINE)
+    solution_found = find_solution.search(plan)
+    if (len(solution_found.span())>1):
+        print("A solution was found")
+        last_result_index = solution_found
+        solved = True
     # TODO: Improve this iteration as right now seems overkilling.
-    for last_result_index in find_goals.finditer(plan):
-        pass
-    if not last_result_index:
-        raise(TypeError)
+    # right now we iterate through all the found plans and we get the latest.
+    # the right way should be only get the last occurrence.
+    if not solved:
+        for last_result_index in find_goals.finditer(plan):
+            pass
+        if not last_result_index:
+            raise(TypeError)
+    # last_result_index contains the last occurrence of the best plan
     planner_steps = regex.findall(plan,last_result_index.span()[1])
     counter = 0
     # Doing a manual if/else for move or visit properties.
@@ -414,43 +428,7 @@ def convert_plan(plan):
         else:
             print("Both instruction cases were false ...\n???????????? ")
         print(splitter)
-
-
-
-    
-    # for instruction in planner_steps:
-    #     moving_instruction = re.findall(r"\(move.+\)", instruction)
-    #     print("Moving Instructions: ", moving_instruction)
-    #     for move in moving_instruction:
-    #         splitter = []  #  will hold each bit of each instruction
-    #         starting = move.find("(") + 1
-    #         ending = move.find(")")
-    #         splitter = move[starting:ending].split()
-    #         instruction_set[counter] = {
-    #             'method': splitter[-1],
-    #             'from': splitter[-3],
-    #             'to': splitter[-2],
-    #             'index': counter,
-    #         }
-    #         counter = counter+1
-    # print(instruction_set)
-
-    # visits_counter = 0
-    # for step in planner_steps:
-    #     visit_instruction = re.findall(r"\(visit.+\)", step)
-    #     print("Visiting Instructions: ", visit_instruction)
-    #     for visit in visit_instruction:
-    #         splitter = []  #  will hold each bit of each instruction
-    #         starting = visit.find("(") + 1
-    #         ending = visit.find(")")
-    #         splitter = visit[starting:ending].split()
-    #         visit_set[visits_counter] = {
-    #             'index' : counter,
-    #             'place' : splitter[-1]
-    #         }
-    #         visits_counter +=1
-    #     print(visit_set)
-    return instruction_set
+    return instruction_set,solved
 
 def run_subprocess(itinerary_slug, sleep_for=None, domain_file=None):
     """

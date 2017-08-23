@@ -220,7 +220,7 @@ class PlacesOfInterestView(FormView):
             # run optic, save output to a txt file and pass the final plan to plan var.
             plan = run_subprocess(itinerary.slug, sleep_for=run_plan_for)
             # from the plan variable convert the plan to an actual python dictionary.
-            plan_dict = convert_plan(plan)
+            plan_dict,solved = convert_plan(plan)
         except TypeError:
             data = {
                 'message': 'An error occurred whilst running the itinerary.'
@@ -283,7 +283,8 @@ class PlacesOfInterestView(FormView):
         if self.request.is_ajax():
             # Request is ajax, send a json response
             data = {
-                'final_plan': plan_json
+                'final_plan': plan_json,
+                'solved': solved
             }
             return JsonResponse(data, status=200)
         return response
