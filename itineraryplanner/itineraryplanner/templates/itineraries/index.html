@@ -376,7 +376,10 @@
                     console.log("success!");
                     let solved = JSON.parse(json['solved']);
                     if(solved){
-                        alert("Hey! The plan was solved succesfully.")
+                        alert("Good News!\n The planner came up with a perfect solution.")
+                    }
+                    else{
+                        alert("The planner came up with the following solution.")
                     }
                     console.log(JSON.parse(json['final_plan']));
                     drawRoute(json);                 

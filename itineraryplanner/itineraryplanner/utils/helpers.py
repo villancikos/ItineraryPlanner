@@ -12,6 +12,11 @@ from django.template.defaultfilters import slugify
 
 APPS_DIR = settings.APPS_DIR.root
 
+
+def remove_special_chars_from_name(name):
+    replaced_name = re.sub('[!@#$0-9()]','',name).strip()
+    return replaced_name
+
 def write_pddl_file(file_contents, file_name="itinerary_problem.pddl"):
     """
     Creates the directory if it doesn't exist and the files needed
@@ -267,10 +272,10 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
             # we only need one preference, so we ditch the + not binary operator.
             minimize_strings[key] = "(is-violated {})".format(value[0])
         elif (len(value) > 1):
-            minimize_strings[key] = "(+ "
+            minimize_strings[key] = "(+\n"
             for item in value:    
                 # we know that there are more than one places in this preference thus +
-                minimize_strings[key] += " (is-violated {})\n".format(item)
+                minimize_strings[key] += "{}(is-violated {})\n".format(tabs[5],item)
             minimize_strings[key] += " )"
     for priority_value, group in minimize_strings.items():
         if (len(group)>1):
@@ -280,12 +285,13 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
                 group)
     #print(minimize_preferences_group)
     # detect if we have more than one group of priorities
-    multi_preferences = True
+    multi_preferences = False
+    multi_preference_counter = 0 # counts if at least two properties used
     for v in minimize_strings.items():
-        if (len(v[1]) < 1):
-            multi_preferences = False
-            break
-
+        if (len(v[1]) > 1):
+            multi_preference_counter+=1
+    if (multi_preference_counter>1):
+        multi_preferences = True
     for place in places: 
         # Getting all the preferences added by the user on each place
         place_preferences = itinerary.itinerary_preference.filter(
@@ -467,6 +473,10 @@ def run_subprocess(itinerary_slug, sleep_for=None, domain_file=None):
     commands = ['optic-cplex',
                 domain_file,
                 problem_file]
+    print("If optic-cplex fails is because needs to be exported to PATH")
+    # Next line added for optic. Run optic cplex domain problem to use
+    # export PATH=".../optic/debug/optic:$PATH"
+
     #TODO: Avoide sleeping if solution is found.
     proc = subprocess.Popen(commands, stdout=subprocess.PIPE)
     time.sleep(sleep_for)

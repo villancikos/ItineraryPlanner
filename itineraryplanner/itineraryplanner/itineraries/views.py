@@ -16,7 +16,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.generic.edit import FormView
 
 from ..utils.helpers import (convert_plan, create_pddl_problem, run_subprocess,
-                             write_pddl_file)
+                             write_pddl_file, remove_special_chars_from_name)
 from .forms import PlacesOfInterestForm
 from .models import Itinerary, ItineraryStep, PlaceOfInterest, Preferences
 
@@ -108,7 +108,7 @@ class PlacesOfInterestView(FormView):
                 place_id=place['place_id'],
                 defaults={
                     "is_hotel": place['is_hotel'],
-                    "name": place['name'],
+                    "name": remove_special_chars_from_name(place['name']),
                     "lat": place['lat'],
                     "lng": place['lng'],
                     "opens": opens,
