@@ -262,6 +262,7 @@ class PlacesOfInterestView(FormView):
                 place_preference.save()
                 # add Google's place_id to dictionary.
                 plan_dict[current_index]['visitPlaceId'] = place_preference.place.place_id
+                plan_dict[current_index]['visitFor'] = place_preference.visitFor
             else:
                 # means we have a moving instruction.
                 method_string = plan_dict[current_index]['method'].upper()
@@ -278,6 +279,7 @@ class PlacesOfInterestView(FormView):
                 # add Google's place_id to dictionary.
                 plan_dict[current_index]['fromPlaceId'] = current_step_qs.origin.place_id
                 plan_dict[current_index]['toPlaceId'] = current_step_qs.destination.place_id
+                plan_dict[current_index]['duration'] = current_step_qs.duration
         pprint.pprint(plan_dict)
         plan_json = json.dumps(plan_dict, ensure_ascii=False)
         if self.request.is_ajax():

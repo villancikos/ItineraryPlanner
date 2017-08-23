@@ -34,6 +34,26 @@
             </div>
         </div>
     </div>
+    <div class="modal fade plannerFailureModal">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Sorry!</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>The planner found a plan but is not the most
+                        appropriate for your needs. Try stretching the time between places.
+                    Or increasing the running time for the planner.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+                </div>
+            </div>
+        </div>
     <div id="loadingDiv">
         <img src="{% static 'images/spinner.svg' %}" onerror="{% static 'images/spinner.gif' %}" alt="loading icon"/>
     </div>
@@ -405,7 +425,7 @@
                         $('.plannerSuccessModal').modal()
                     }
                     else{
-                        alert("The planner came up with the following solution.")
+                        $('.plannerFailureModal').modal()
                     }
                     drawRoute(json);
                     displaySolutions(JSON.parse(json['final_plan']))     
@@ -459,13 +479,17 @@
                 console.log(currentKey, planDict[currentKey]);
                 var solMethod =planDict[currentKey]['method'];
                 var $stepWrapper = $('<div class="list-group-item">');
+                /*********VISIT ****************************/
                 if (solMethod==='visit'){
+                    var $visitFor = planDict[currentKey]['visitFor'];
                     var $place = placesWithNames[planDict[currentKey]['visitPlaceId']];
                     var $stepDiv = $('<div class="">');
                     $stepDiv.append(
                         $('<p data-index='+currentKey+'>').append($('<h5>Visit</h5>'))
                     ).append(
                         $('<small>'+$place+'</small>')
+                    ).append(
+                        $('<p>For: '+$visitFor+' minutes.</p>')
                     );
                     var $indexDiv = $('<div class="">').append(
                         $('<div class="p-3">Step:'+planDict[currentKey]['index']+'</div>')
@@ -483,16 +507,20 @@
                         google.maps.event.trigger(markerToTriggerOnClick, 'click');
                     });
                 }
+                /*********MOVE ****************************/
                 else{
                     var $from = placesWithNames[planDict[currentKey]['fromPlaceId']];
                     var $to = placesWithNames[planDict[currentKey]['toPlaceId']];
+                    var $duration = planDict[currentKey]['duration'];
                     var $stepDiv = $('<div class="">');
                     $stepDiv.append(
                         $('<p data-index='+currentKey+'>').append($('<h5>Move</h5>'))
                     ).append(
-                        $('<small>FROM:'+$from+'</small></br>')
+                        $('<small>FROM: '+$from+'</small></br>')
                     ).append(
-                        $('<small>TO:'+$to+'</small>')
+                        $('<small>TO: '+$to+'</small>')
+                    ).append(
+                        $('<p>Takes: '+$duration+' minutes. Method: '+solMethod+'</p>')
                     );
                     var $indexDiv = $('<div class="">').append(
                         $('<div class="p-3">Step:'+planDict[currentKey]['index']+'</div>')
@@ -502,7 +530,7 @@
                     $solutionList.append($stepWrapper);
                     /******* Add Click event to Marker ************/
                     markers.forEach(function(marker){
-                        if (planDict[currentKey]['fromPlaceId']===marker.placeResult.place_id){
+                        if (planDict[currentKey]['toPlaceId']===marker.placeResult.place_id){
                             markerToTriggerOnClick = marker;
                         }
                     });
