@@ -9,6 +9,7 @@ server to compute the desired TOUR.
 import json
 import pprint
 import re
+import time
 
 import googlemaps
 from django.core.urlresolvers import reverse_lazy
@@ -151,6 +152,7 @@ class PlacesOfInterestView(FormView):
             )
         # TODO: Fix this as it runs more than needed.
         # Traverse all the possible origins
+        GOOGLE_MAPS_START = time.monotonic()
         for origin in places_to_visit:
             # Traverse all the possible destinations
             for destination in places_to_visit:
@@ -190,7 +192,8 @@ class PlacesOfInterestView(FormView):
                 # To DEBUG remove comments
                 # else:
                 #     print("Destination:{0} and Origin:{0} are the same".format(destination, origin))
-
+        GOOGLE_TIME_ELAPSED = time.monotonic()-GOOGLE_MAPS_START
+        print("GOOGLE API TOOK :",GOOGLE_TIME_ELAPSED)
         '''
         all_distances = itinerary.get_distance_matrix_places_format()
         dmx = gmaps.distance_matrix(
@@ -218,7 +221,10 @@ class PlacesOfInterestView(FormView):
         write_pddl_file(file_contents, file_name)
         try:
             # run optic, save output to a txt file and pass the final plan to plan var.
+            PLANNER_TIME_START =time.monotonic()
             plan = run_subprocess(itinerary.slug, sleep_for=run_plan_for)
+            PLANNER_ELAPSED_TIME = time.monotonic()-PLANNER_TIME_START
+            print("PLANNER TOOK: ", PLANNER_ELAPSED_TIME)
             # from the plan variable convert the plan to an actual python dictionary.
             plan_dict,solved = convert_plan(plan)
         except TypeError:
@@ -279,7 +285,7 @@ class PlacesOfInterestView(FormView):
                 # add Google's place_id to dictionary.
                 plan_dict[current_index]['fromPlaceId'] = current_step_qs.origin.place_id
                 plan_dict[current_index]['toPlaceId'] = current_step_qs.destination.place_id
-                plan_dict[current_index]['duration'] = current_step_qs.duration
+                plan_dict[current_index]['duration'] = current_step_qs.duration/60
         pprint.pprint(plan_dict)
         plan_json = json.dumps(plan_dict, ensure_ascii=False)
         if self.request.is_ajax():

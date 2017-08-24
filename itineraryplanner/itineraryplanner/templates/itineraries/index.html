@@ -511,7 +511,8 @@
                 else{
                     var $from = placesWithNames[planDict[currentKey]['fromPlaceId']];
                     var $to = placesWithNames[planDict[currentKey]['toPlaceId']];
-                    var $duration = planDict[currentKey]['duration'];
+                    var $duration = planDict[currentKey]['duration']; //Math.round((num + 0.00001) * 100) / 100
+                    $duration = Math.round(($duration+0.00001)* 100)/100;
                     var $stepDiv = $('<div class="">');
                     $stepDiv.append(
                         $('<p data-index='+currentKey+'>').append($('<h5>Move</h5>'))

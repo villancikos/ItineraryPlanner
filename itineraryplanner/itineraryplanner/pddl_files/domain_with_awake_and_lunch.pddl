@@ -16,7 +16,7 @@
 
 (:functions 
     (traveltime ?mode - mode ?loc-from ?loc-to - location)
-	(visitfor ?loc - location ?tourist - tourist)
+	  (visitfor ?loc - location ?tourist - tourist)
     (havelunchfor ?tourist -tourist)
 )
 
@@ -53,7 +53,7 @@
     (over all (at ?tourist ?loc)) 
     (over all (open ?loc))
     (over all (awake ?tourist))
-    (over all (hadlunch ?tourist))
+    ;(over all (hadlunch ?tourist))
 )
  :effect
    (at end (visited ?tourist ?loc))

@@ -199,7 +199,7 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
                 tabs[1], tabs[2], tabs[3])
     preference_equivalences = {
         0 : 100,
-        1: 500,
+        1 : 500,
         2 : 1000,
         3 : 5000, # check out if instead this goes to goal.
     }
@@ -359,7 +359,7 @@ def create_pddl_problem(itinerary,awaken_times ,output_plan=False):
         metrics += "{}{}{})\n{})\n)".format(tabs[5], minimize_preferences_group, tabs[4], tabs[1])
     else:
         metrics += "{}{}\n{})\n)".format( minimize_preferences_group, tabs[2], tabs[1])
-    objects += " - location tourist1 - tourist walk car bike tube - mode)\n"
+    objects += " - location tourist1 - tourist walk car bike transit - mode)\n"
     # print(header, objects, init, times, tourist_starting_location,
     #      paths, traveltimes, visit_for, goals, constraints, metrics)
     file_contents = header + objects + init + times + tourist_starting_location + \
