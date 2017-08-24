@@ -16,10 +16,51 @@
 </head>
 
 <body>
+    <div class="modal fade plannerSuccessModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Good News!</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>The planner found a solution for your query.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade plannerFailureModal">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Sorry!</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>The planner found a plan but is not the most
+                        appropriate for your needs. Try stretching the time between places.
+                    Or increasing the running time for the planner.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+                </div>
+            </div>
+        </div>
     <div id="loadingDiv">
         <img src="{% static 'images/spinner.svg' %}" onerror="{% static 'images/spinner.gif' %}" alt="loading icon"/>
     </div>
     <div class="container-fluid wrapper">
+        <button id="showSolution">Solution</button>
+        <div id="solutionSteps">
+        </div>
         <div class="row leftSidebar">
             <div id="places" class="col-lg-4 p-0">
                 <input id="pac-input" class="controls noEnterSubmit" type="text" placeholder="Search Box">
@@ -35,22 +76,40 @@
                             <button id="clearPlaces" class="btn-block" type="button">Remove All</button>
                         </div>                        
                     </div>
+                    
                     <div class="row awakeTimes">
                         <div class="col-6">
                             <label for="wakeUpTime">Wake Up Time</label>
-                            <input class="wakeUpTime inputMask" name="wakeUpTime" type="text" size="6"/>
+                            <input class="wakeUpTime inputMask" name="wakeUpTime" type="text" size="6" value="08:00" required/>
                         </div>
                         <div class="col-6">
                             <label for="sleepTime">Go To Bed</label>
-                            <input class="sleepTime inputMask" name="sleepTime" type="text" size="6"/>
+                            <input class="sleepTime inputMask" name="sleepTime" type="text" size="6" value="21:00" requried/>
                         </div>                        
+                    </div>
+                    <div class="transpMethodsDiv text-justify row small">
+                        <div class="runForDiv col-6">
+                            <label for="runFor">RunCodeFor</label>
+                            <input type="number" max=100 min="2" name="runFor" class="runForInput" value="2" size="4" required placeholder="seconds">
+                        </div>
+                        <div class="transportationMethod col-6 text-center">
+                            <label for="driving">Car</label>
+                            <input class="drivingCbx" type="checkbox" name="driving" value="driving">
+                            <label for="walking">Walk</label>
+                            <input class="walkingCbx" type="checkbox" name="walking" value="walking" checked>
+                            <label for="bicycling">Bike</label>
+                            <input class="bicyclingCbx" type="checkbox" name="bicycling" value="bicycling">
+                            <label for="transit">Transit</label>
+                            <input class="transitCbx" type="checkbox" name="transit" value="transit">
+                        </div>
                     </div>
                     <div id="searchedPlaces">
                     </div>
                 </form>
             </div>
             {% comment %} Everything map related goes here {% endcomment %}
-            <div id="map" class="col-lg-8"></div>
+            <div id="map" class="col-lg-8">
+            </div>
             <div style="display: none">
                 <div id="info-content">
                     <table>
@@ -99,7 +158,7 @@
             .ajaxStop(function () {
                 $loading.hide();
             }).ready(function(){
-                $('.inputMask').inputmask({"mask": "99:99hrs"}); //specifying options
+                $('.inputMask').inputmask("hh:mm"); //specifying options
               });
         // Input Mask plugin info
         var successURL = "{{success_url}}";
@@ -111,16 +170,25 @@
         var map, placesService, infoWindow;
         var markers = [];
         var placesSelected = [];
+        var placesWithNames = {};
         var idOfPlacesSelected = [];
         // this list holds the complete google response after search (place object)
         var googleSearchedPlaces = [];
         var hostnameRegexp = new RegExp('^https?://.+?/');
         // global list for directionRenderer
         directionsRendererList = [];
+        var showButtonClicked = false;
         //var service = new google.maps.DistanceMatrixService;
         // debugger;
         // var csrftoken = Cookies.get('csrftoken');
         // initializing Map
+        // dictionary to transalte values for transportation methods
+        transportation_equivalences =  {
+            'walk':'WALKING',
+            'bike':'BICYCLING',
+            'car':'DRIVING',
+            'transit':'TRANSIT'
+        }
         map = new google.maps.Map(document.getElementById("map"), {
             center: mapInitialLocation,
             zoom: 15,
@@ -170,6 +238,7 @@
                 googleSearchedPlaces.push("place_id:" + place.place_id);
                 placesSelected.push(place);
                 idOfPlacesSelected.push(place.place_id);
+                placesWithNames[place.place_id]=place.name;
                 populateMarkers(place);
                 if (place.geometry.viewport) {
                     // Only geocodes have viewport.
@@ -189,6 +258,7 @@
         });
 
         // We no longer use this function because we delegate it to the Back End.
+        /*
         function distanceMatrixCall() {
             var computedDistances = [];
             var gs = new google.maps.DistanceMatrixService;
@@ -254,12 +324,48 @@
                 });
             });
         };
-
+        */
+        function breakOutTimes(time){
+            var timeArray = time.split(":");
+            var timeHours = timeArray[0];
+            var timeMinutes = timeArray[1];
+            return timeHours+timeMinutes
+        }
         
         // Listener for the submit inside the sidebar list with selectedPlaces.
         $('#placesSelectedForm').on('submit', function (e) {
             e.preventDefault();
-            $myForm = JSON.stringify($(this).serializeArray());
+            // Section of the code to retrieve Properties.
+            var properties = {}
+            var $transportationMethods = {
+                'driving':false,
+                'walking': false,
+                'bicycling': false,
+                'transit': false
+            }
+            var sleepAt = breakOutTimes($('.sleepTime').val());
+            var wakeUpAt = breakOutTimes($('.wakeUpTime').val());
+            var runFor = $('.runForInput').val();
+            if (runFor < 0 && runFor > 100){
+                runFor = 5;
+            }
+            properties['sleepTime'] = sleepAt;
+            properties['wakeUpTime'] = wakeUpAt;
+            properties['runFor'] = runFor;
+            // Section of the code to retrieve transportation methods
+            
+            $('.transportationMethod [type="checkbox"]').each(function(){
+                var name = $(this).attr('name');
+                var checked = $(this).prop('checked');
+                $transportationMethods[name]=checked;
+            });
+
+            console.log($transportationMethods);
+            properties['methods'] = $transportationMethods;
+            //properties['methods'] = {'driving': false, 'walking': true }            
+            //$myForm = JSON.stringify($(this).serializeArray());
+            var toSubmitProperties = JSON.stringify(properties);
+
             var awakeTimes = $()
             // Preparing Preferences Dict 
             var preferenceDict = {};
@@ -288,7 +394,10 @@
                 return toSubmitList.push(make_json_marker(marker));
             });
             var toSubmitJsonList = JSON.stringify(toSubmitList);
-
+            /***************************
+            Delete old solution to make room for a new one
+            *******************************/
+            clearOldSolution();
             var csrftoken = Cookies.get('csrftoken');
             function csrfSafeMethod(method) {
                 // these HTTP methods do not require CSRF protection
@@ -304,22 +413,141 @@
             $.ajax({
                 type: "POST",
                 url: successURL,
-                data: { placesToVisit: toSubmitJsonList, preferences: toSubmitPreferences },
+                data: { 
+                    placesToVisit: toSubmitJsonList, 
+                    preferences: toSubmitPreferences,
+                    properties: toSubmitProperties    
+                },
                 success: function (json) {
                     // What we receive from success on server side.
-                    console.log("success!");
-                    console.log(json);
-                    drawRoute(json);                    
+                    let solved = JSON.parse(json['solved']);
+                    if(solved){
+                        $('.plannerSuccessModal').modal()
+                    }
+                    else{
+                        $('.plannerFailureModal').modal()
+                    }
+                    drawRoute(json);
+                    displaySolutions(JSON.parse(json['final_plan']))     
                     $("#submitPlaceSelection").attr("disabled", false);
                 },
                 error: function (json) {
                     // in case of error we get this from server
                     $("#submitPlaceSelection").attr("disabled", false);
+                    alert("An error has occured. Please check the log.");
                     console.log(json.responseJSON);
                 },
             });
         });
-        
+
+        function clearOldSolution(){
+            showButtonClicked = false;
+            $('#showSolution').text('Hide Plan');
+            $('#showSolution').hide();
+            $('#solutionSteps').empty().hide();
+        }
+        $('#showSolution').on("click", function(){
+            if (showButtonClicked){
+                // haven't clicked so let's toggle text:
+                $(this).text('Show Plan');
+                $('#solutionSteps').hide();
+            }
+            else{
+                $(this).text('Hide Plan');
+                $('#solutionSteps').show();
+            }
+            showButtonClicked = !showButtonClicked
+        })
+
+        function displaySolutions(planDict){
+            $('#showSolution').show();
+            showButtonClicked=true;
+
+            $('#solutionSteps').show();
+            /*
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">List group item heading</h5>
+                    <small>3 days ago</small>
+                </div>
+                <p class="mb-1">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+                <small>Donec id elit non mi porta.</small>
+            */
+            var $solutionWrapper = $('#solutionSteps');
+            var $solutionList = $('<div class="list-group flex-column align-items-stretch">');
+            Object.keys(planDict).forEach(function(currentKey) {
+                var markerToTriggerOnClick;
+                console.log(currentKey, planDict[currentKey]);
+                var solMethod =planDict[currentKey]['method'];
+                var $stepWrapper = $('<div class="list-group-item">');
+                /*********VISIT ****************************/
+                if (solMethod==='visit'){
+                    var $visitFor = planDict[currentKey]['visitFor'];
+                    var $place = placesWithNames[planDict[currentKey]['visitPlaceId']];
+                    var $stepDiv = $('<div class="">');
+                    $stepDiv.append(
+                        $('<p data-index='+currentKey+'>').append($('<h5>Visit</h5>'))
+                    ).append(
+                        $('<small>'+$place+'</small>')
+                    ).append(
+                        $('<p>For: '+$visitFor+' minutes.</p>')
+                    );
+                    var $indexDiv = $('<div class="">').append(
+                        $('<div class="p-3">Step:'+planDict[currentKey]['index']+'</div>')
+                    );
+                    $stepWrapper.append($indexDiv);
+                    $stepWrapper.append($stepDiv);
+                    $solutionList.append($stepWrapper);
+                    /******* Add Click event to Marker ************/
+                    markers.forEach(function(marker){
+                        if (planDict[currentKey]['visitPlaceId']===marker.placeResult.place_id){
+                            markerToTriggerOnClick = marker;
+                        }
+                    });
+                    $stepWrapper.on("click", function(){
+                        google.maps.event.trigger(markerToTriggerOnClick, 'click');
+                    });
+                }
+                /*********MOVE ****************************/
+                else{
+                    var $from = placesWithNames[planDict[currentKey]['fromPlaceId']];
+                    var $to = placesWithNames[planDict[currentKey]['toPlaceId']];
+                    var $duration = planDict[currentKey]['duration']; //Math.round((num + 0.00001) * 100) / 100
+                    $duration = Math.round(($duration+0.00001)* 100)/100;
+                    var $stepDiv = $('<div class="">');
+                    $stepDiv.append(
+                        $('<p data-index='+currentKey+'>').append($('<h5>Move</h5>'))
+                    ).append(
+                        $('<small>FROM: '+$from+'</small></br>')
+                    ).append(
+                        $('<small>TO: '+$to+'</small>')
+                    ).append(
+                        $('<p>Takes: '+$duration+' minutes. Method: '+solMethod+'</p>')
+                    );
+                    var $indexDiv = $('<div class="">').append(
+                        $('<div class="p-3">Step:'+planDict[currentKey]['index']+'</div>')
+                    );
+                    $stepWrapper.append($indexDiv);
+                    $stepWrapper.append($stepDiv);
+                    $solutionList.append($stepWrapper);
+                    /******* Add Click event to Marker ************/
+                    markers.forEach(function(marker){
+                        if (planDict[currentKey]['toPlaceId']===marker.placeResult.place_id){
+                            markerToTriggerOnClick = marker;
+                        }
+                    });
+                    $stepWrapper.on("click", function(){
+                        google.maps.event.trigger(markerToTriggerOnClick, 'click');
+                    });
+                }
+
+            });
+            $solutionWrapper.append($solutionList);
+
+            //$('#showSolution').toggle();
+            //$('#showSolution').text('Show Solution');
+            //$('#solutionSteps').toggle();
+
+        }
         function getRandomColor() {
             var letters = '0123456789ABCDEF';
             var color = '#';
@@ -352,7 +580,10 @@
             //window.directionsRenderer.setMap(map);
             //window.directionsRenderer.setDirections(result);
         }
+
+
         function drawRoute(json) {
+            //debugger;
             window.directionsService = new google.maps.DirectionsService;
             planDict = JSON.parse(json['final_plan']);  
             directions = []; 
@@ -363,49 +594,64 @@
             });
             directionsRendererList=[];
             Object.keys(planDict).forEach(function(key){
-                var fromPlaceId = planDict[key]['fromPlaceId']
-                var toPlaceId =planDict[key]['toPlaceId']
-                var fromLocation = null;
-                var toLocation = null;
-                placesSelected.forEach(function(element){
-                    if (element.place_id === fromPlaceId){
-                        fromLocation = element.geometry.location;
-                    }
-                    if (element.place_id === toPlaceId){
-                        toLocation = element.geometry.location;
-                    }
-                });
-                window.directionsService.route({
-                    origin: fromLocation,
-                    destination: toLocation,
-                    travelMode: 'WALKING'
-                    }, function(response, status) {
-                        if (status === 'OK') {
-                            //window.directionsDisplay.setDirections(response);
-                            directions.push(response);  
-                            // create a polyline with random color
-                            var polylineOptionsActual = new google.maps.Polyline({
-                                strokeColor: getRandomColor(),
-                                strokeOpacity: 0.6,
-                                strokeWeight: 4,
-                            });
-                            // for each response create a new renderer object.
-                            var directionRenderer = new google.maps.DirectionsRenderer(
-                                { 
-                                    map: map,
-                                    suppressMarkers: true, 
-                                    polylineOptions: polylineOptionsActual 
-                                }
-                            )
-                            directionRenderer.setDirections(response)
-                            directionsRendererList.push(directionRenderer);
-                            console.log("Here comes the renderer List...........................")                            
-                            console.log(directionsRendererList)
-                            //renderDirections(response);
-                        } else {
-                            window.alert('Directions request failed due to ' + status);
+                if (planDict[key]['method'] !== 'visit'){
+                    var fromPlaceId = planDict[key]['fromPlaceId'];
+                    var toPlaceId = planDict[key]['toPlaceId'];
+                    var method = planDict[key]['method'];
+                    var googleMethod = transportation_equivalences[method]
+                    var fromLocation = null;
+                    var toLocation = null;
+
+                    placesSelected.forEach(function(element){
+                        if (element.place_id === fromPlaceId){
+                            fromLocation = element.geometry.location;
                         }
-                });
+                        if (element.place_id === toPlaceId){
+                            toLocation = element.geometry.location;
+                        }
+                    });
+                    window.directionsService.route({
+                        origin: fromLocation,
+                        destination: toLocation,
+                        travelMode: google.maps.TravelMode[googleMethod]
+                        }, function(response, status) {
+                            if (status === 'OK') {
+                                //window.directionsDisplay.setDirections(response);
+                                directions.push(response);  
+                                // create a polyline with random color
+                                var polylineOptionsActual = new google.maps.Polyline({
+                                    strokeColor: getRandomColor(),
+                                    strokeOpacity: 0.6,
+                                    strokeWeight: 4,
+                                });
+                                // for each response create a new renderer object.
+                                if (googleMethod = 'BICICLYNG'){
+                                    var directionRenderer = new google.maps.DirectionsRenderer(
+                                        { 
+                                            map: map,
+                                            suppressMarkers: true, 
+                                            polylineOptions: polylineOptionsActual,
+                                            suppressBicyclingLayer: true
+                                        }
+                                    )
+                                }
+                                else{
+                                    var directionRenderer = new google.maps.DirectionsRenderer(
+                                        { 
+                                            map: map,
+                                            suppressMarkers: true, 
+                                            polylineOptions: polylineOptionsActual,
+                                        }
+                                    )
+                                }
+                                directionRenderer.setDirections(response)
+                                directionsRendererList.push(directionRenderer);
+                                //renderDirections(response);
+                            } else {
+                                window.alert('Directions request failed due to ' + status);
+                            }
+                    });
+                }
                 //window.directionsDisplay.setDirections(directions);
             });
             
@@ -517,13 +763,13 @@
                     .append(
                     $('<option>', {
                         value: 2,
-                        text: "Should Visit!"
+                        text: "Should Visit"
                     })
                     )
                     .append(
                     $('<option>', {
                         value: 3,
-                        text: "Must Visit!!!"
+                        text: "Must Visit"
                     })
                     ).prop('required', true)
             );
@@ -801,6 +1047,7 @@
             });
             markers = [];
             placesSelected = [];
+            placesWithNames = {};
             googleSearchedPlaces = [];
             idOfPlacesSelected = [];
             $('#id_placesToVisit').val('');
@@ -826,6 +1073,7 @@
                     indexToRemove = index;
                 }
             });
+            delete placesWithNames[placeId];
             google.maps.event.clearInstanceListeners(markers[indexToRemove]);
             markers[indexToRemove].setMap(null);
             // Remove the marker from Markers List

@@ -1,0 +1,20 @@
+{
+	"ChIJq4H9JM4EdkgRjHEe4kS8Pck": {
+		"priority": "0",
+		"visitFor": "30",
+		"startAt": "ChIJq4H9JM4EdkgRjHEe4kS8Pck",
+		"endAt": false
+	},
+	"ChIJ2dGMjMMEdkgRqVqkuXQkj7c": {
+		"priority": "0",
+		"visitFor": "30",
+		"startAt": false,
+		"endAt": false
+	},
+	"ChIJh7wHoqwEdkgR3l-vqQE1HTo": {
+		"priority": "0",
+		"visitFor": "30",
+		"startAt": false,
+		"endAt": "ChIJh7wHoqwEdkgR3l-vqQE1HTo"
+	}
+}
