@@ -42,3 +42,6 @@ Gulps helps develop the front-end easily through the `gulpfile.js` command added
 >[Useful for Database manipulation using Postgres in Ubuntu](https://www.digitalocean.com/community/tutorials/how-to-use-postgresql-with-your-django-application-on-ubuntu-14-04)
 
 
+#### How To Run This
+First go to Desktop. Make sure to workon itplan_dev environment. Otherwise everything would fail.
+Then, just go to the folder where manage.py is located, which is inside desktop.
